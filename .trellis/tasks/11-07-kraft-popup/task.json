@@ -21,6 +21,6 @@
   "children": [],
   "parent": null,
   "relatedFiles": [],
-  "notes": "",
+  "notes": "Kraft-paper popup0.9.2 complete. Cached native grain/fibers, warm base, dark-brown ink and popup-only light appearance; geometry/events/API/storage unchanged. Candidate independent compile/review and existing build suite passed; native screenshot inspected. Installed canonical app, runtime AX/input allowed/tap enabled after restart. Private GitHub ZIP/SHA256 verified; old local duplicates recoverably trashed. No secrets or real API calls.",
   "meta": {}
 }
