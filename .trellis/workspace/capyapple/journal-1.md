@@ -142,3 +142,37 @@ Explicit non-thinking for official DeepSeek models, concise output, exact last-r
 ### Next Steps
 
 - User dismisses old Keychain system prompt; install final candidate and measure real public-sample response. Keep task in progress; no measured speedup claimed.
+
+
+## Session 5: Local API configuration without password prompts
+<!-- trellis-session: v=2 fp=9591583b6430cbf5 -->
+
+**Date**: 2026-11-07
+**Task**: Local API configuration without password prompts
+**Branch**: `main`
+
+### Summary
+
+Replaced Keychain with user-approved per-user local credential file, preserving origin binding and latency fixes; final v0.9 native real-provider request passed without password prompt.
+
+### Main Changes
+
+- File directory0700/file0600, atomic save/delete, no Keychain migration or secret export; local-copy app and v0.9 zip updated.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `51b11f1` | fix: use local API configuration without keychain prompts |
+
+### Testing
+
+- [OK] Temporary fake-key file persistence/permissions/errors, all offline regressions, independent compile/review and strict signing/plist passed. User saved key in native settings; public80-char sample AX0.01s and AI1.9s. Only actual-file metadata read by tools.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Gather user feedback on everyday popup responsiveness; single-sample timing is not a guarantee.

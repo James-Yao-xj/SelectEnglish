@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 4
+- **Total Sessions**: 5
 - **Last Active**: 2026-11-07
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~144 | Active |
+| `journal-1.md` | ~178 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 5 | 2026-11-07 | Local API configuration without password prompts | `51b11f1` | `main` |
 | 4 | 2026-11-07 | Reduce analysis latency and unblock credential wait | `4fd53ef` | `main` |
 | 3 | 2026-11-07 | Vocabulary-first learning popup v0.7 | `94376d7` | `main` |
 | 2 | 2026-11-07 | Dictionary-style popup v0.6 | `2089093` | `main` |
