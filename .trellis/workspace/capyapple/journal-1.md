@@ -210,3 +210,38 @@ Installed canonical /Applications/SelectEnglish.app, verified running path and n
 ### Next Steps
 
 - Use installed menu-bar app; future updates replace only the application bundle.
+
+
+## Session 7: Fix full-review findings and install patch0.9.1
+<!-- trellis-session: v=2 fp=551c81b6587ac3ed -->
+
+**Date**: 2026-11-07
+**Task**: Fix full-review findings and install patch0.9.1
+**Branch**: `main`
+
+### Summary
+
+Fixed selected-word vocabulary correspondence, misleading offline instructions and hidden pending-AX click cancellation. Installed/published0.9.1; preserved local credentials/favorites.
+
+### Main Changes
+
+- Shared dismissal state tracks generation and retains initiating-event cutoff through AX completion/AI startup; wrong/empty singleword vocabulary rejected with lexical normalization.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b603c44` | fix: validate selected words and cancel hidden captures |
+| `e4f7b34` | docs: record patch installation and regression validation |
+
+### Testing
+
+- [OK] All offline regressions, new word/dismissal cases, independent candidate compile/review and final codesign/plist passed. Native AX/input access restored after user confirmation; installed app tap enabled. Release asset digest matches; no real API or hardware slow-AX test for patch.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Collect everyday Force Click feedback; do not rebuild solely for documentation updates.
