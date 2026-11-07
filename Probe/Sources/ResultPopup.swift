@@ -1,5 +1,60 @@
 import AppKit
 
+/// Draw a cached paper tile so popup redraws do not regenerate grain or fibers.
+private final class KraftPaperView: NSView {
+    static let ink = NSColor(srgbRed: 0.23, green: 0.16, blue: 0.10, alpha: 1)
+    static let secondaryInk = NSColor(srgbRed: 0.39, green: 0.29, blue: 0.19, alpha: 1)
+
+    private static let tile: NSImage = {
+        let size = NSSize(width: 256, height: 256)
+        let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 256, pixelsHigh: 256,
+            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
+        let context = NSGraphicsContext(bitmapImageRep: bitmap)!
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = context
+        defer { NSGraphicsContext.restoreGraphicsState() }
+        NSColor(srgbRed: 0.87, green: 0.77, blue: 0.61, alpha: 1).setFill()
+        NSRect(origin: .zero, size: size).fill()
+
+        // Stable texture prevents the paper from changing when content updates.
+        var seed: UInt64 = 0x4B52414654
+        func random() -> CGFloat {
+            seed = seed &* 6364136223846793005 &+ 1442695040888963407
+            return CGFloat(seed >> 40) / CGFloat(1 << 24)
+        }
+        for _ in 0..<4200 {
+            let shade: CGFloat = random() < 0.55 ? 0 : 1
+            NSColor(calibratedWhite: shade, alpha: 0.025 + random() * 0.035).setFill()
+            NSRect(x: random() * 256, y: random() * 256,
+                   width: 0.6 + random() * 0.8, height: 0.5 + random() * 0.7).fill()
+        }
+        for _ in 0..<210 {
+            let origin = NSPoint(x: random() * 256, y: random() * 256)
+            NSColor(calibratedWhite: random() < 0.5 ? 0.15 : 1, alpha: 0.07).setStroke()
+            let fiber = NSBezierPath()
+            fiber.lineWidth = 0.3
+            fiber.move(to: origin)
+            fiber.curve(to: NSPoint(x: origin.x + 3 + random() * 9, y: origin.y + random() * 2 - 1),
+                controlPoint1: NSPoint(x: origin.x + 2, y: origin.y + 0.6),
+                controlPoint2: NSPoint(x: origin.x + 4, y: origin.y - 0.6))
+            fiber.stroke()
+        }
+        let image = NSImage(size: size)
+        image.addRepresentation(bitmap)
+        return image
+    }()
+
+    override func draw(_ dirtyRect: NSRect) {
+        NSColor(patternImage: Self.tile).setFill()
+        bounds.fill()
+        Self.secondaryInk.withAlphaComponent(0.18).setStroke()
+        let rim = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 9.5, yRadius: 9.5)
+        rim.lineWidth = 1
+        rim.stroke()
+    }
+}
+
 /// A borderless panel that does not activate the app when it appears.
 private final class LookupPanel: NSPanel {
     var onEscape: (() -> Void)?
@@ -41,10 +96,8 @@ final class ResultPopup: NSObject {
         panel.becomesKeyOnlyIfNeeded = false
         panel.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary, .transient]
         panel.onEscape = { [weak self] in self?.dismiss() }
-        let material = NSVisualEffectView()
-        material.material = .popover
-        material.blendingMode = .behindWindow
-        material.state = .active
+        panel.appearance = NSAppearance(named: .aqua)
+        let material = KraftPaperView()
         material.wantsLayer = true
         material.layer?.cornerRadius = 10
         material.layer?.masksToBounds = true
@@ -64,7 +117,7 @@ final class ResultPopup: NSObject {
         let header = NSStackView()
         header.spacing = 8
         sourceLabel.font = .systemFont(ofSize: 12, weight: .semibold)
-        sourceLabel.textColor = .secondaryLabelColor
+        sourceLabel.textColor = KraftPaperView.secondaryInk
         sourceLabel.lineBreakMode = .byTruncatingTail
         sourceLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         header.addArrangedSubview(sourceLabel)
@@ -76,11 +129,11 @@ final class ResultPopup: NSObject {
         stack.addArrangedSubview(header)
         let sourceScroll = textScroll(sourceView)
         sourceView.font = .systemFont(ofSize: 13)
-        sourceView.textColor = .secondaryLabelColor
+        sourceView.textColor = KraftPaperView.secondaryInk
         sourceScroll.heightAnchor.constraint(equalToConstant: 48).isActive = true
         stack.addArrangedSubview(sourceScroll)
         stateLabel.font = .systemFont(ofSize: 12)
-        stateLabel.textColor = .secondaryLabelColor
+        stateLabel.textColor = KraftPaperView.secondaryInk
         stateLabel.maximumNumberOfLines = 3
         stack.addArrangedSubview(stateLabel)
         configure(resultView, in: resultScroll)
@@ -132,6 +185,7 @@ final class ResultPopup: NSObject {
         view.isEditable = false
         view.isSelectable = true
         view.drawsBackground = false
+        view.textColor = KraftPaperView.ink
         view.isVerticallyResizable = true
         view.isHorizontallyResizable = false
         view.autoresizingMask = [.width]
@@ -154,6 +208,7 @@ final class ResultPopup: NSObject {
     private func icon(_ name: String, label: String, action: Selector) -> NSButton {
         let button = NSButton(image: NSImage(systemSymbolName: name, accessibilityDescription: label)!, target: self, action: action)
         button.isBordered = false
+        button.contentTintColor = KraftPaperView.secondaryInk
         button.controlSize = .small
         button.toolTip = label
         button.setAccessibilityLabel(label)
@@ -165,6 +220,9 @@ final class ResultPopup: NSObject {
         button.bezelStyle = .inline
         button.controlSize = .small
         button.font = .systemFont(ofSize: 12)
+        button.attributedTitle = NSAttributedString(string: title, attributes: [
+            .font: NSFont.systemFont(ofSize: 12), .foregroundColor: KraftPaperView.secondaryInk
+        ])
         return button
     }
 
@@ -190,7 +248,7 @@ final class ResultPopup: NSObject {
     func display(_ analysis: Analysis) {
         let body = NSMutableAttributedString()
         func append(_ text: String, bold: Bool = false) {
-            body.append(NSAttributedString(string: text, attributes: [.font: NSFont.systemFont(ofSize: 14, weight: bold ? .semibold : .regular), .foregroundColor: NSColor.labelColor]))
+            body.append(NSAttributedString(string: text, attributes: [.font: NSFont.systemFont(ofSize: 14, weight: bold ? .semibold : .regular), .foregroundColor: KraftPaperView.ink]))
         }
         for (index, section) in analysis.displaySections.enumerated() {
             if index > 0 { append("\n\n") }

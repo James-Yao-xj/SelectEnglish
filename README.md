@@ -4,9 +4,9 @@ MacBook 原生菜单栏工具：选中英文 → 触控板用力点按 → 中�
 
 ## 安装最新版
 
-从 [GitHub Releases](https://github.com/James-Yao-xj/SelectEnglish/releases/latest) 下载 `SelectEnglish-v0.9.1.zip`，解压后把 `SelectEnglish.app` 拖到“应用程序”，双击启动。正式安装路径为 `/Applications/SelectEnglish.app`。不要同时运行开发构建或旧副本。发布页同时提供 SHA256 校验文件。
+从 [GitHub Releases](https://github.com/James-Yao-xj/SelectEnglish/releases/latest) 下载 `SelectEnglish-v0.9.2.zip`，解压后把 `SelectEnglish.app` 拖到“应用程序”，双击启动。正式安装路径为 `/Applications/SelectEnglish.app`。不要同时运行开发构建或旧副本。发布页同时提供 SHA256 校验文件。
 
-本机已安装 v0.9.1；旧测试应用与旧安装包已移到废纸篓。配置、API 密钥和收藏保留在用户的 Application Support 目录，升级只替换应用本身。已配置的本地密钥无需重新输入；从钥匙串旧版首次升级仍需输入一次。
+本机已安装 v0.9.2；旧测试应用与旧安装包已移到废纸篓。配置、API 密钥和收藏保留在用户的 Application Support 目录，升级只替换应用本身。已配置的本地密钥无需重新输入；从钥匙串旧版首次升级仍需输入一次。
 
 ## 从源码构建
 
@@ -60,3 +60,6 @@ API 密钥保存于 `~/Library/Application Support/SelectEnglish/Private/api-key
 - 弹窗尚未出现、选区仍在读取时，后续点击可取消；过期读取不能再弹窗或开始 AI 请求。延迟送达的原始点击不会误关新结果。
 - 更新 Probe 说明，明确自动 AI 请求、离线测试和手动选区诊断的区别；补充词条对应及点击取消/事件顺序回归。
 从 v0.9 升级会保留本机接口配置、密钥与收藏，无需重新输入 API Key。开发版签名更新后，macOS 可能要求重新确认辅助功能与输入监听。
+
+## v0.9.2 牛皮纸外观
+翻译小浮层改为暖棕米色的牛皮纸背景，带细颗粒和少量纤维纹理，配深棕文字及细边线。纹理预先绘制并缓存，不随内容更新重新生成。浮层固定浅色外观，保证系统深色模式下纸面和文字的对比度；设置与收藏窗口沿用原有外观。取词、取消、AI 请求和本机配置行为保持不变。

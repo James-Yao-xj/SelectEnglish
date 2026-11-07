@@ -40,7 +40,7 @@ System Settings may show an enabled entry while the current ad hoc build reports
 - `bash Probe/test.sh` exercises mock HTTP success, errors, malformed results, timeout/cancel and notebook persistence/delete/corruption without network.
 
 ## Dictionary popup presentation
-- `ResultPopup.swift` owns the borderless nonactivating NSPanel and native popover material. Show only after AX capture or an explicit user open action; never on startup.
+- `ResultPopup.swift` owns the borderless nonactivating NSPanel and cached native kraft-paper background. Show only after AX capture or an explicit user open action; never on startup.
 - Snapshot pointer with source app at pressure stage 2. `PopupGeometry.swift` selects the containing full screen before clamping to its visibleFrame; handle negative-origin and adjacent monitors.
 - Keep AX diagnostics in the status window. Popup messages use actionable plain language, not AX names or stage counts.
 - A nonactivating key panel accepts local Esc/copy without NSApp.activate. Outside local/global mouse clicks dismiss and invalidate in-flight AX/AI work. No global key monitor is added.
@@ -99,3 +99,6 @@ The canonical installed app is `/Applications/SelectEnglish.app`. Copy the verif
 5. **Cases:** Good: Happy! matches happy. Base: simple multiword sentence may have no vocabulary. Bad: Happy matches banana, or hidden AX work completes/shows/sends after a later click-away.
 6. **Required tests:** wrong/empty single-word entry, case/boundary punctuation, internal connectors and inflection, no-space fragments; production dismissal state for hidden pending, original event delivery ordering, visible inside/outside, cancellation and superseded callbacks. Existing HTTP/history/storage/geometry/gate regressions remain.
 7. **Wrong vs correct:** do not infer pending work from panel visibility or describe the current executable as offline-only. Track capture separately, preserve generation checks, and distinguish offline tests/manual diagnosis from configured automatic AI requests in current docs.
+
+## Kraft-paper presentation
+The popup uses a cached deterministic256px native bitmap tile, warm opaque beige, low-alpha grain/fibers and dark-brown primary/secondary ink. Keep rounded clipping/rim/shadow and current layout unchanged. Apply light appearance only to the paper popup, including icons/footer and attributed result foregrounds, so system dark appearance cannot produce white text on light paper. Do not regenerate texture on each refresh or add runtime media/network dependencies. Visual-only changes need candidate compile and native visual inspection, not cosmetic unit tests; preserve all event/capture/AI/storage state.
