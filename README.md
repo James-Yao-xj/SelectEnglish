@@ -2,7 +2,13 @@
 
 MacBook 原生菜单栏工具：选中英文 → 触控板用力点按 → 中文翻译与表达积累 → 手动收藏。
 
-## 运行
+## 安装最新版
+
+从 [GitHub Releases](https://github.com/James-Yao-xj/SelectEnglish/releases/latest) 下载 `SelectEnglish-v0.9.zip`，解压后把 `SelectEnglish.app` 拖到“应用程序”，双击启动。正式安装路径为 `/Applications/SelectEnglish.app`。不要同时运行开发构建或旧副本。发布页同时提供 SHA256 校验文件。
+
+本机已安装 v0.9；旧测试应用与旧安装包已移到废纸篓。配置、API 密钥和收藏保留在用户的 Application Support 目录，升级只替换应用本身。已配置的本地密钥无需重新输入；从钥匙串旧版首次升级仍需输入一次。
+
+## 从源码构建
 
 ```sh
 bash Probe/build.sh
@@ -23,7 +29,7 @@ open .build/probe/SelectEnglishProbe.app
 
 本机真实 Force Click 已验证：被动全局手势转换到 stage 2，随后读取 TextEdit 完整 50 字符选区。最终 v0.5 在 Chrome 重按后成功读取 40 字符选区；其他应用仍需实测；系统查询可能同时弹出或改变选区。图片和扫描 PDF 不支持。v0.7 已用公开测试句验证真实 DeepSeek 接口返回，并在小浮窗按新顺序显示生词、整句解释和固定表达。新安装仍需自行配置服务与授权。
 
-当前开发构建临时签名，重编译可能需要重新授权同一个应用。包名和 bundle ID 保留探针身份，以避免无谓更换权限身份。验证过的 v0.4 副本保存在 `.build/verified-v0.4/`；不要同时运行多个副本。
+当前开发构建临时签名，重编译可能需要重新授权同一个应用。包名和 bundle ID 保留探针身份，以避免无谓更换权限身份。旧测试副本已清理；请统一运行 `/Applications/SelectEnglish.app`，避免同时运行多个副本。
 
 ## Trellis
 
