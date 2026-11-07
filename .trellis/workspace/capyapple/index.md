@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 7
+- **Total Sessions**: 8
 - **Last Active**: 2026-11-07
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~247 | Active |
+| `journal-1.md` | ~281 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 8 | 2026-11-07 | Kraft-paper popup visual refresh0.9.2 | `c202a3a` | `main` |
 | 7 | 2026-11-07 | Fix full-review findings and install patch0.9.1 | `b603c44`, `e4f7b34` | `main` |
 | 6 | 2026-11-07 | Install v0.9, clean old copies and publish release | `3213826` | `main` |
 | 5 | 2026-11-07 | Local API configuration without password prompts | `51b11f1` | `main` |

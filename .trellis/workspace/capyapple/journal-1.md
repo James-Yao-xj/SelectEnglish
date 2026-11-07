@@ -245,3 +245,37 @@ Fixed selected-word vocabulary correspondence, misleading offline instructions a
 ### Next Steps
 
 - Collect everyday Force Click feedback; do not rebuild solely for documentation updates.
+
+
+## Session 8: Kraft-paper popup visual refresh0.9.2
+<!-- trellis-session: v=2 fp=827f32884a7a40e2 -->
+
+**Date**: 2026-11-07
+**Task**: Kraft-paper popup visual refresh0.9.2
+**Branch**: `main`
+
+### Summary
+
+Applied warm kraft-paper background with cached subtle grain/fibers, dark-brown ink and popup-only light appearance; installed and published0.9.2.
+
+### Main Changes
+
+- Preserved rounded panel, geometry, events, cancellation, AI and local storage. Kept config/favorites and removed duplicate local build/packages recoverably.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c202a3a` | feat: style lookup popup with kraft paper texture |
+
+### Testing
+
+- [OK] Independent bounded review and candidate compile clean, required offline suite/signature/plist passed. Native screenshot inspected; installed app AX/input allowed/tap enabled after existing authorization restoration. Release digest matches.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Gather user feedback on paper tone and texture strength; no rebuild for docs-only work.
