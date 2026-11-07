@@ -74,3 +74,37 @@ Replaced large result window with a native dictionary-like popup at the Force Cl
 ### Next Steps
 
 - User-configured real AI service validation remains pending; keep active MVP task open.
+
+
+## Session 3: Vocabulary-first learning popup v0.7
+<!-- trellis-session: v=2 fp=76fa4c6630b123e6 -->
+
+**Date**: 2026-11-07
+**Task**: Vocabulary-first learning popup v0.7
+**Branch**: `main`
+
+### Summary
+
+Completed vocabulary POS/meaning, sentence explanation, then genuine fixed expressions; real DeepSeek public-sample response verified in the compact native popup.
+
+### Main Changes
+
+- Preserved historical favorites and added strict live schema tests; restored explicitly authorized Accessibility and Input Monitoring for the frozen build.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `94376d7` | feat: explain vocabulary before sentence and fixed expressions |
+
+### Testing
+
+- [OK] Independent review, offline service/storage/geometry checks and strict app signature/plist checks passed; real popup response and timeout listener recovery observed.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Collect user feedback on vocabulary selection and popup readability.
