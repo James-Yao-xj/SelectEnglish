@@ -24,8 +24,8 @@ User approved Force Click feasibility followed by the native MVP. Force Click �
 
 ## Remaining
 - [x] Physical Chrome Force Click → 40-character selected text captured by v0.5; no configured AI, no request sent.
-- [ ] User fills their service configuration in application; real provider request remains unverified.
-- [ ] Archive after the real-provider check is completed or explicitly deferred.
+- [x] User configuration stored locally; real DeepSeek response verified in the v0.7 popup with a public sample.
+- [x] Real-provider check completed; ready for Trellis archive.
 
 ## Verification commands
 - `bash Probe/test.sh`: gate and offline mock service/persistence checks.
@@ -47,3 +47,23 @@ Do not rebuild the working signed application for documentation-only changes. Ke
 - Compact NSPanel, native material, pointer anchor, screen bounds, local Esc/outside dismissal and cancellation implemented; no startup result window.
 - Core service tests and geometry tests passed; candidate full compilation passed.
 - Final signed v0.6 will be frozen for main-session native visual QA; no real user-configured AI request was made by implementer.
+
+## Current authorized refinement: learning content order
+- [x] Update typed AI contract/prompt/validation for contextual vocabulary POS/meaning, sentence explanation and genuine fixed expressions.
+- [x] Preserve old notebook decoding and distinguish historical missing fields.
+- [x] Update popup and notebook formatting to the user order.
+- [x] Add meaningful structured response/order/legacy compatibility tests; build and independently review.
+
+## v0.7 validation checkpoint
+Learning sections are shared by popup and notebook in the exact order 生词 → 整句解释 → 固定表达. Isolated word analysis requires a word/POS/meaning entry; explanations acknowledge absent sentence context. Live responses cannot silently use the historical schema. Legacy favorites remain decodable and are not rewritten on open; temporary-file tests cover new/legacy mixed saves. Core credentials, real user settings and provider were not accessed during tests. Final native visual QA remains owned by main session after signed build.
+
+## Runtime diagnosis and cancellation label correction
+Actual v0.7 diagnostics showed a created but disabled tap after prior event delivery; exact reason was not previously retained, so no timeout or permission cause is claimed. Added actual input-listen access, created/enabled state, per-start reset counters and disabled reason/counts. Recovery is restricted to the documented timeout callback; user/system disable requires manual action.
+CUA/user outside dismissal cancelled an in-flight known-sample request but retained its loading text. Updated dismissal to show cancelled/retry when an AI task was active, without reopening or changing a completed result. Final regression/build/sign follow this bounded correction.
+
+## Final native acceptance
+- [x] User approved restoration of Accessibility and Input Monitoring; current signed app reports both allowed and tap enabled.
+- [x] Observed one real timeout and successful enabled listener afterward.
+- [x] Real DeepSeek public-sample response visibly displayed vocabulary POS/meaning → sentence translation/explanation → fixed expressions in the compact popup.
+- [x] Final CUA complete; signed build frozen, no code changes after restored authorization.
+See `research/learning-order-check.md` for separate hardware-capture and real-provider evidence.

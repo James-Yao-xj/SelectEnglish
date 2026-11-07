@@ -16,7 +16,7 @@
 ## AI 契约
 已确认采用支持自定义地址、模型、密钥的 OpenAI 兼容 chat completions 接口；地址和模型不硬编码。
 请求包括选区及中文学习分析指令；把选区明确标记为待翻译数据。
-响应解析成 translation 和 expressions（phrase、meaning、usage、example）。
+响应解析成 vocabulary（word、partOfSpeech、meaning）、translation、sentenceExplanation 和 expressions（phrase、meaning、usage、example）。新响应严格验证；历史收藏缺少的新字段保留为 nil 并明确标示。
 限制选区长度，定义超时，支持取消；同一时刻只保留一个有效分析任务，防止旧结果覆盖新结果。
 对网络、HTTP 和结构解析错误分别给出可操作提示；不记录原文或密钥。
 
@@ -39,3 +39,6 @@ Keychain holds one API key, preferences hold endpoint/model and the key's normal
 
 ## Dictionary-style presentation refinement
 Replace only result presentation with a compact borderless nonactivating NSPanel, native NSVisualEffectView popover material, rounded container and shadow. Preserve normal settings/notebook/diagnostics windows. Snapshot pointer position at the actual pressure-stage2 trigger, propagate it with source app, capture AX before presenting popup, and clamp geometry to the relevant screen visibleFrame. No startup popup. Keep network cancellation/generation guard on dismiss; never activate app merely to show the result. Outside mouse clicks and local Esc dismiss; no global keyboard monitoring. UI changes are authorized by the user's explicit active-task correction; no new task or new product scope.
+
+## Learning analysis contract refinement
+Extend Analysis with contextual vocabulary entries (word, partOfSpeech, meaning) and sentence explanation, preserving translation and expression fields for stored-notebook compatibility. Live AI responses must include new sections; legacy saved records remain decodable and clearly identify missing historical sections. Render both attributed popup and plain notebook in vocabulary → full-sentence explanation → fixed expressions order. Keep credential/configuration and trigger/popup lifecycle untouched.

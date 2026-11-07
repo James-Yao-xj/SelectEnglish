@@ -174,13 +174,10 @@ final class ResultPopup: NSObject {
         func append(_ text: String, bold: Bool = false) {
             body.append(NSAttributedString(string: text, attributes: [.font: NSFont.systemFont(ofSize: 14, weight: bold ? .semibold : .regular), .foregroundColor: NSColor.labelColor]))
         }
-        append("中文翻译\n", bold: true)
-        append(analysis.translation + "\n\n")
-        append("英文表达\n", bold: true)
-        if analysis.expressions.isEmpty { append("这段原文没有适合单独积累的表达。") }
-        for entry in analysis.expressions {
-            append("\n" + entry.phrase + "\n", bold: true)
-            append(entry.meaning + "\n" + entry.usage + "\n例句：" + entry.example + "\n")
+        for (index, section) in analysis.displaySections.enumerated() {
+            if index > 0 { append("\n\n") }
+            append(section.heading + "\n", bold: true)
+            append(section.text)
         }
         resultView.textStorage?.setAttributedString(body)
         resultView.scrollToBeginningOfDocument(nil)

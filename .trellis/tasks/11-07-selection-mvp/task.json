@@ -21,6 +21,6 @@
   "children": [],
   "parent": null,
   "relatedFiles": [],
-  "notes": "v0.5 implemented and pushed. TextEdit and Chrome Force Click selection verified. Real AI-provider validation pending user settings; keep task in progress.",
+  "notes": "v0.7 complete: TextEdit/Chrome physical Force Click capture previously verified; compact popup real DeepSeek sample verified with vocabulary, sentence explanation and fixed expressions. Offline checks and independent review passed. Credentials remain Keychain only.",
   "meta": {}
 }

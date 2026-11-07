@@ -13,7 +13,7 @@
 - Report AX errors explicitly; never present stale selection as current.
 - Verify physical Force Click in TextEdit and a browser with user assistance.
 - Do not claim global pressure delivery from a local-window test.
-- Physical TextEdit and Chrome Force Click selection passed in v0.4/v0.5. Native popup presentation and dismissal passed separately in v0.6. A real configured provider remains a QA item.
+- Physical TextEdit and Chrome Force Click selection passed in v0.4/v0.5. Native popup presentation and dismissal passed separately in v0.6. A real DeepSeek public-sample response and the three learning sections passed in v0.7; provider QA and physical capture are separate evidence.
 
 ## Probe conventions
 - `Probe/Sources/GestureGate.swift` triggers once at stage 2 and resets at stage 0 or mouse-up. Reversing from stage 2 to stage 1 must not rearm.
@@ -45,3 +45,24 @@ System Settings may show an enabled entry while the current ad hoc build reports
 - Keep AX diagnostics in the status window. Popup messages use actionable plain language, not AX names or stage counts.
 - A nonactivating key panel accepts local Esc/copy without NSApp.activate. Outside local/global mouse clicks dismiss and invalidate in-flight AX/AI work. No global key monitor is added.
 - Network updates refresh the retained anchor without ordering a dismissed panel front. Settings, notebook, and diagnostics remain menu-bar windows.
+
+## Learning response and historical favorites
+- Live Analysis requires vocabulary entries (word, contextual partOfSpeech, meaning), translation, sentenceExplanation and expressions. Use 0–8 vocabulary items and 0–5 genuine fixed expressions; a single selected word must include its vocabulary entry even when common.
+- Optional vocabulary/sentenceExplanation values represent missing historical data only. Decode old favorites without live validation or implicit migration. Never replace missing historical fields with invented analysis.
+- `Analysis.displaySections` supplies the shared 生词 → 整句解释 → 固定表达 order for attributed popup and plain notebook. Label historical expressions honestly when the old response did not distinguish fixed collocations.
+- Tests cover strict new live schema, contextual POS, legitimate empty arrays, isolated words, legacy opening without writes and mixed old/new notebook roundtrip.
+
+## Runtime tap and dismissal diagnostics
+- Expose current-process CGPreflightListenEventAccess, tap creation/enabled state, per-start counters and exact timeout/user-input disable metadata in diagnostics only. AX trust is not proof of active input listening.
+- Only an explicit tapDisabledByTimeout event permits automatic tapEnable(true). Do not recover automatically from tapDisabledByUserInput or request broader permissions.
+- Reset counters on each explicit listener start so old delivery cannot be mistaken for current installation evidence.
+- Dismissing an in-flight AI result cancels and invalidates it, and changes the retained loading label to cancelled/retry. Explicit reopening must not falsely look like the old request is still running.
+
+### Learning contract reference
+1. **Scope / trigger:** live AI schema now includes learning vocabulary and sentence explanation; old notebooks remain readable.
+2. **Signatures:** `Analysis.validated(source: String? = nil) throws -> Analysis`; `Analysis.displaySections` is shared by both presentations.
+3. **Contract:** live JSON includes `vocabulary: [{word, partOfSpeech, meaning}]`, `translation`, `sentenceExplanation`, and `expressions: [{phrase, meaning, usage, example}]`. Vocabulary is 0–8; expressions 0–5. Nonempty single-word input requires vocabulary.
+4. **Validation/errors:** missing live learning fields, blank entry/POS/meaning, or over-limit arrays fail validation. Missing historical optional fields decode without fabricated content. Empty expression arrays are valid.
+5. **Cases:** Good: contextual vocabulary and genuine idioms. Base: simple sentence with empty vocabulary/expressions. Bad: old live schema accepted as a new analysis.
+6. **Required tests:** new schema acceptance, invalid fields rejected, section order, isolated-word requirement, legacy read without write, mixed historical/new save and reopen.
+7. **Wrong vs correct:** do not call live validation on old notebook records or silently default missing live fields. Decode history as history; validate new AI responses before display/save.

@@ -1,0 +1,11 @@
+# Learning order v0.7 checks
+
+Implemented shared popup/notebook sections: 生词 (word, contextual partOfSpeech, Chinese meaning), 整句解释 (translation + sentenceExplanation), 固定表达 (only genuine source collocations/idioms, allowed empty). Optional historical fields decode missing data honestly; live API validation requires new sections. Single isolated word always requires a vocabulary entry; lack of context must not invent sentence context.
+
+Independent compile/review and offline tests passed: complete schema, missing/invalid fields, POS/meaning, order, empty arrays, single word, rejection of legacy live API response, legacy notebook read, mixed legacy+new save/reopen, existing service errors/cancel/timeout/corruption and geometry/gate regressions. No API key in source/fixtures; credentials remain Keychain only.
+
+Native QA initially dismissed a known-sample request during interaction. Fixed the retained stale loading message on dismissal: an active request becomes canceled/retry on explicit reopening; completed content remains intact.
+
+After explicit user authorization, restored Accessibility and Input Monitoring for the frozen v0.7 app. Current-process diagnostics confirmed AX authorized, input access allowed, tap created and enabled. A real timeout event was recorded once; the listener remained enabled after timeout recovery. There were no user/system disable events in that start. Counts are metadata only; no selected text or credential is logged.
+
+Real DeepSeek response verified in the native popup using our public test sentence: “Despite the setback, she persevered and eventually turned the tide in her favor.” AX captured all 80 characters. The completed popup displayed 生词 with contextual POS and Chinese meanings (including setback / 名词 and persevered / 动词（过去式）), then 整句解释 with translation and grammatical explanation, then 固定表达 including turn the tide and in her favor with usage/examples. This was a real configured-provider result, separate from offline mock tests. No user-private source or API credential is included in this evidence. TextEdit/Chrome physical Force Click capture remains separately evidenced by the v0.4/v0.5 checks; the v0.7 provider sample used explicit diagnostic capture and popup Retry.

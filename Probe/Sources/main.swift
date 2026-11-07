@@ -142,7 +142,14 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func makeResultWindow() {
         popup = ResultPopup()
-        popup.onDismiss = { [weak self] in self?.invalidate() }
+        popup.onDismiss = { [weak self] in
+            guard let self else { return }
+            if self.analysisTask != nil {
+                self.stateLabel.stringValue = "已取消，可点击重试。"
+                self.popup.refresh()
+            }
+            self.invalidate()
+        }
         popup.onRetry = { [weak self] in self?.analyze() }
         popup.onCancel = { [weak self] in self?.cancel() }
         popup.onFavorite = { [weak self] in self?.saveFavorite() }
@@ -180,11 +187,11 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func makeDiagnosticsWindow() {
-        let (window, stack) = window(title: "SelectEnglish · 触发与选区状态", width: 740, height: 360)
+        let (window, stack) = window(title: "SelectEnglish · 触发与选区状态", width: 740, height: 440)
         diagnosticsWindow = window
         stack.addArrangedSubview(diagnosticsState)
-        stack.addArrangedSubview(buttons([("授权辅助功能", #selector(authorize)), ("重新启动监听", #selector(restartMonitor))]))
-        stack.addArrangedSubview(NSTextField(wrappingLabelWithString: "手动检查只读取指定应用，不自动发送 AI。全局重按始终读取触发时的前台应用。"))
+        stack.addArrangedSubview(buttons([("授权辅助功能", #selector(authorize)), ("授权输入监听", #selector(authorizeInput)), ("重新启动监听", #selector(restartMonitor))]))
+        stack.addArrangedSubview(NSTextField(wrappingLabelWithString: "输入监听仅用于观察鼠标和触控板手势，不监听键盘。辅助功能用于读取你选中的文字。手动检查不会自动发送 AI。"))
         stack.addArrangedSubview(diagnosticTarget)
         stack.addArrangedSubview(buttons([("刷新应用", #selector(refreshTargets)), ("读取指定应用选区", #selector(readTarget))]))
         finishLayout(stack)
@@ -355,12 +362,17 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func refreshDiagnostics() {
-        diagnosticsState.stringValue = "辅助功能：\(AXIsProcessTrusted() ? "已授权" : "未授权")\n全局监听：\(monitor.isEnabled ? "已启用" : "未启用，请授权后重新启动监听")\n原始手势：\(monitor.rawGestures)  压力：\(monitor.pressureEvents)  stage 2：\(monitor.stage2Events)  触发：\(monitor.triggers)\n最近选区：\(lastCapture)"
+        diagnosticsState.stringValue = "辅助功能：\(AXIsProcessTrusted() ? "已授权" : "未授权")\n当前进程输入监听访问：\(monitor.hasListenAccess ? "已允许" : "未允许")；监听创建：\(monitor.isCreated ? "成功" : "未创建")；启用：\(monitor.isEnabled ? "是" : "否")\n第 \(monitor.startCount) 次启动（计数已重置） · 原始手势：\(monitor.rawGestures)  压力：\(monitor.pressureEvents)  stage 2：\(monitor.stage2Events)  触发：\(monitor.triggers)\n停用次数：超时 \(monitor.timeoutDisables) / 系统或用户 \(monitor.userInputDisables)\n最近停用：\(monitor.lastDisabledReason)\n最近选区：\(lastCapture)"
     }
     @objc private func authorize() {
         _ = AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary)
         refreshDiagnostics()
     }
+    @objc private func authorizeInput() {
+        _ = CGRequestListenEventAccess()
+        refreshDiagnostics()
+    }
+
     @objc private func restartMonitor() { monitor.start(); refreshDiagnostics() }
     @objc private func refreshTargets() {
         let previous = diagnosticTarget.selectedItem?.tag

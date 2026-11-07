@@ -12,10 +12,25 @@ final class ForceClickMonitor {
     private(set) var stage2Events = 0
     private(set) var triggers = 0
     var isEnabled: Bool { tap.map { CGEvent.tapIsEnabled(tap: $0) } ?? false }
+    var isCreated: Bool { tap != nil }
+    var hasListenAccess: Bool { CGPreflightListenEventAccess() }
+    private(set) var timeoutDisables = 0
+    private(set) var userInputDisables = 0
+    private(set) var lastDisabledReason = "尚未收到停用事件"
+    /// Event counters belong to this start attempt, not a previous installation.
+    private(set) var startCount = 0
 
     /// Reinstall after a permission change. The tap never includes keyboard events.
     func start() {
         stop()
+        startCount += 1
+        rawGestures = 0
+        pressureEvents = 0
+        stage2Events = 0
+        triggers = 0
+        timeoutDisables = 0
+        userInputDisables = 0
+        lastDisabledReason = "本次启动后尚未收到停用事件"
         let types = [CGEventType.leftMouseDown.rawValue, CGEventType.leftMouseUp.rawValue,
                      CGEventType.leftMouseDragged.rawValue,
                      UInt32(NSEvent.EventType.gesture.rawValue), UInt32(NSEvent.EventType.pressure.rawValue)]
@@ -44,7 +59,17 @@ final class ForceClickMonitor {
 
     /// Fix the source app at stage 2. Never perform AX or network work in this callback.
     private func receive(type: CGEventType, event: CGEvent) {
-        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+        if type == .tapDisabledByTimeout {
+            timeoutDisables += 1
+            lastDisabledReason = "超时；已请求恢复，请核对当前启用状态"
+            // Apple permits re-enabling a tap after this explicit timeout event.
+            if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
+            DispatchQueue.main.async { [weak self] in self?.onStatusChange?() }
+            return
+        }
+        if type == .tapDisabledByUserInput {
+            userInputDisables += 1
+            lastDisabledReason = "系统或用户停用；未自动恢复，请检查权限并手动重新启动监听"
             DispatchQueue.main.async { [weak self] in self?.onStatusChange?() }
             return
         }
