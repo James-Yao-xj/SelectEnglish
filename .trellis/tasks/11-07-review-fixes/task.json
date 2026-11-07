@@ -21,6 +21,6 @@
   "children": [],
   "parent": null,
   "relatedFiles": [],
-  "notes": "",
+  "notes": "All three review findings fixed in installed0.9.1/build10. Focused regressions plus all existing offline checks, independent review/candidatecompile and final signature/plist checks passed. Native AX/input allowed/tap enabled after user system confirmation; app running canonical path. Private GitHub v0.9.1 ZIP/SHA256 verified; local old/duplicate artifacts moved to Trash. No real API or physical slow-AX test for patch; no credentials/userdata accessed or modified.",
   "meta": {}
 }
