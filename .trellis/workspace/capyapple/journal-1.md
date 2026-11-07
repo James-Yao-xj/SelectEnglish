@@ -40,3 +40,37 @@ Implemented and pushed native macOS selection translation app; actual TextEdit a
 ### Next Steps
 
 - User enters endpoint/model/key in application; verify real provider before task archive.
+
+
+## Session 2: Dictionary-style popup v0.6
+<!-- trellis-session: v=2 fp=91bb582eaa17b328 -->
+
+**Date**: 2026-11-07
+**Task**: Dictionary-style popup v0.6
+**Branch**: `main`
+
+### Summary
+
+Replaced large result window with a native dictionary-like popup at the Force Click position.
+
+### Main Changes
+
+- Compact nonactivating panel, native material, bounded multi-screen placement, menu-only startup, local Esc and outside-click dismissal.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2089093` | feat: show translations in dictionary-style popup |
+
+### Testing
+
+- [OK] Independent compile/review, geometry and regression suites, native visual inspection, Esc/outside-click via inventory, actual authorization/monitor enabled.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- User-configured real AI service validation remains pending; keep active MVP task open.
