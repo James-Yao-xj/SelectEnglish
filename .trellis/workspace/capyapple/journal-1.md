@@ -108,3 +108,37 @@ Completed vocabulary POS/meaning, sentence explanation, then genuine fixed expre
 ### Next Steps
 
 - Collect user feedback on vocabulary selection and popup readability.
+
+
+## Session 4: Reduce analysis latency and unblock credential wait
+<!-- trellis-session: v=2 fp=0eaa182fed133f56 -->
+
+**Date**: 2026-11-07
+**Task**: Reduce analysis latency and unblock credential wait
+**Branch**: `main`
+
+### Summary
+
+Explicit non-thinking for official DeepSeek models, concise output, exact last-result memory reuse and asynchronous credential reads; final native acceptance pending protected SecurityAgent handoff.
+
+### Main Changes
+
+- Added total/AI and AX timing, retry bypass, settings invalidation and removal of redundant key-presence decrypt reads.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4fd53ef` | perf: reduce analysis reasoning and avoid blocking credential reads |
+
+### Testing
+
+- [OK] Offline suite, 10 serialized provider boundary cases, fake-reader background/cancellation regression and independent whole candidate compilation passed.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- User dismisses old Keychain system prompt; install final candidate and measure real public-sample response. Keep task in progress; no measured speedup claimed.
