@@ -6,3 +6,7 @@ DerivedData/
 .env.*
 *.xcuserstate
 xcuserdata/
+
+# Runtime credentials live outside the repository; ignore accidental copies.
+**/Private/
+**/api-key

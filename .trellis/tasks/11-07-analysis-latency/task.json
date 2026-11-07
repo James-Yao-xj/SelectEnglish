@@ -21,6 +21,6 @@
   "children": [],
   "parent": null,
   "relatedFiles": [],
-  "notes": "Code and offline checks complete: official DeepSeek non-thinking, concise prompt, last-result memory reuse, monotonic durations, asynchronous analysis key read and no settings presence-decrypt. Final candidate compiled. Native final installation/real-provider timing pending user dismissal of protected SecurityAgent prompt; CUA is forbidden to operate that system app. Do not claim measured speedup or archive yet.",
+  "notes": "v0.9 complete: user-approved private local credential file replaces Keychain without migration; offline and independent review/build passed. User saved their own key in UI, actual directory/file modes0700/0600 confirmed via metadata only. Native public80-char sample read0.01s and real DeepSeek three-section result completed1.9s without password prompt. Prior v0.8 handoff resolved. No tools accessed credential value; no comparative speedup percentage claimed.",
   "meta": {}
 }

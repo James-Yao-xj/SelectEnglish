@@ -162,7 +162,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let (window, stack) = window(title: "SelectEnglish · AI 设置", width: 720, height: 410)
         settingsWindow = window
         window.delegate = self
-        stack.addArrangedSubview(NSTextField(wrappingLabelWithString: "保存配置后，用力点按会把选中的文字发送到你指定的 AI 接口。未配置时只显示原文。密钥保存在系统钥匙串；同一服务留空可保留密钥，更换服务域名必须输入新密钥。"))
+        stack.addArrangedSubview(NSTextField(wrappingLabelWithString: "保存配置后，用力点按会把选中的文字发送到你指定的 AI 接口。未配置时只显示原文。密钥以明文保存在本机用户私有文件中，仅当前用户可读写。旧版升级后需重新输入一次；同一服务留空可保留本地密钥，更换服务域名需输入新密钥。"))
         stack.addArrangedSubview(NSTextField(labelWithString: "完整 HTTPS 接口地址（包含 /chat/completions）"))
         endpointField.placeholderString = "https://你的服务地址/v1/chat/completions"
         stack.addArrangedSubview(endpointField)
@@ -204,7 +204,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         endpointField.stringValue = UserDefaults.standard.string(forKey: "ai.endpoint") ?? ""
         modelField.stringValue = UserDefaults.standard.string(forKey: "ai.model") ?? ""
         keyField.stringValue = ""
-        settingsState.stringValue = "密钥保存在系统钥匙串。留空可沿用已保存密钥；未保存过则需输入。"
+        settingsState.stringValue = "密钥保存在本机私有文件。从旧版升级请重新输入一次；留空可保留本地已有密钥。"
         show(settingsWindow)
     }
     @objc private func showNotebook() { refreshNotebook(); show(notebookWindow) }
@@ -312,7 +312,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let requestGeneration = generation
         let text = currentSource
         let actionStarted = ProcessInfo.processInfo.systemUptime
-        stateLabel.stringValue = "正在读取密钥…如有系统提示请确认；可点击取消。"
+        stateLabel.stringValue = "正在读取本地配置…可点击取消。"
         analysisTask = Task { @MainActor [weak self] in
             guard let self else { return }
             do {

@@ -1,2 +1,3 @@
 {"file": ".trellis/spec/macos/index.md", "reason": "Native application and AI request contracts"}
 {"file": ".trellis/tasks/11-07-analysis-latency/research/deepseek-latency.md", "reason": "Official default thinking behavior and exact-host restriction"}
+{"file": ".trellis/tasks/11-07-analysis-latency/research/local-credentials.md", "reason": "User-authorized local credential contract; no Keychain migration"}

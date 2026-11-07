@@ -50,6 +50,39 @@ func check(_ condition: @autoclosure () -> Bool, _ message: String) throws {
         catch { try check(error is CancellationError, "cancelled credential wait cannot return a key for a request") }
         print("PASS: background credential read and post-read cancellation (fake reader only)")
 
+        let credentialDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: credentialDirectory) }
+        let credentialFile = credentialDirectory.appendingPathComponent("Private/api-key")
+        let missingKey = try KeyStore.read(file: credentialFile)
+        try check(missingKey == nil, "missing local credential returns nil")
+        try KeyStore.save("fake-local-first", file: credentialFile)
+        let firstKey = try KeyStore.read(file: credentialFile)
+        try check(firstKey == "fake-local-first", "local credential survives reopen")
+        let directoryMode = try FileManager.default.attributesOfItem(atPath: credentialFile.deletingLastPathComponent().path)[.posixPermissions] as! NSNumber
+        let fileMode = try FileManager.default.attributesOfItem(atPath: credentialFile.path)[.posixPermissions] as! NSNumber
+        try check(directoryMode.intValue == 0o700 && fileMode.intValue == 0o600, "private directory and credential file modes")
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: credentialFile.deletingLastPathComponent().path)
+        try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: credentialFile.path)
+        try KeyStore.save("fake-local-replaced", file: credentialFile)
+        let replaced = try KeyStore.read(file: credentialFile)
+        let replacedDirectoryMode = try FileManager.default.attributesOfItem(atPath: credentialFile.deletingLastPathComponent().path)[.posixPermissions] as! NSNumber
+        let replacedFileMode = try FileManager.default.attributesOfItem(atPath: credentialFile.path)[.posixPermissions] as! NSNumber
+        try check(replaced == "fake-local-replaced" && replacedDirectoryMode.intValue == 0o700 && replacedFileMode.intValue == 0o600, "replace restores private permissions")
+        try KeyStore.save("", file: credentialFile)
+        let deleted = try KeyStore.read(file: credentialFile)
+        try check(deleted == nil, "empty save deletes local credential")
+        try KeyStore.save("", file: credentialFile)
+        try Data([0xff, 0xfe]).write(to: credentialFile)
+        do { _ = try KeyStore.read(file: credentialFile); throw AppError.message("accepted corrupt credential") }
+        catch { try check(error.localizedDescription != "accepted corrupt credential", "corrupt UTF-8 is an error") }
+        let blockedParent = credentialDirectory.appendingPathComponent("not-a-directory")
+        try Data("fake file".utf8).write(to: blockedParent)
+        do { try KeyStore.save("fake-key", file: blockedParent.appendingPathComponent("api-key")); throw AppError.message("suppressed write error") }
+        catch { try check(error.localizedDescription != "suppressed write error", "local I/O failures propagate") }
+        do { _ = try KeyStore.read(file: credentialFile.deletingLastPathComponent()); throw AppError.message("suppressed read error") }
+        catch { try check(error.localizedDescription != "suppressed read error", "read I/O failures propagate") }
+        print("PASS: isolated local credential save/replace/reopen/delete/modes/UTF-8/I/O failures")
+
         let config = URLSessionConfiguration.ephemeral
         config.protocolClasses = [MockProtocol.self]
         let session = URLSession(configuration: config)

@@ -1,15 +1,17 @@
 import Foundation
-import Security
 
-/// Keep the API key in the login keychain. No key is written to preferences.
+/// Keep the API key in a private per-user file outside the repository.
 enum KeyStore {
-    /// Serialize async reads while securityd may wait for the user's system approval.
-    private static let readQueue = DispatchQueue(label: "com.selectenglish.keychain-read")
+    /// One queue keeps async local reads ordered without blocking the UI.
+    private static let readQueue = DispatchQueue(label: "com.selectenglish.credential-read")
 
-    /// Read off the UI thread. Cancellation cannot dismiss a system permission prompt.
+    private static var applicationFile: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("SelectEnglish/Private/api-key")
+    }
+
+    /// Read off the UI thread. Tests supply a fake reader without user credentials.
     ///
-    /// Args:
-    ///   reader: The keychain read operation. Tests supply a fake operation without credentials.
     /// Returns:
     ///   The saved key, or nil when no key exists. A cancelled caller never receives a key.
     static func readAsync(using reader: @escaping @Sendable () throws -> String? = { try KeyStore.read() }) async throws -> String? {
@@ -24,46 +26,32 @@ enum KeyStore {
         return value
     }
 
-    private static var query: [String: Any] {
-        [kSecClass as String: kSecClassGenericPassword,
-         kSecAttrService as String: "com.selectenglish.probe.ai",
-         kSecAttrAccount as String: "api-key"]
-    }
-
-    static func read() throws -> String? {
-        var request = query
-        request[kSecReturnData as String] = true
-        request[kSecMatchLimit as String] = kSecMatchLimitOne
-        var result: CFTypeRef?
-        let status = SecItemCopyMatching(request as CFDictionary, &result)
-        if status == errSecItemNotFound { return nil }
-        guard status == errSecSuccess else { throw failure(status) }
-        guard let data = result as? Data, let key = String(data: data, encoding: .utf8) else {
-            throw AppError.message("钥匙串中的密钥数据无法读取，请重新保存密钥。")
+    /// Read the local UTF-8 key. A supplied file URL is used only for isolated tests.
+    static func read(file: URL? = nil) throws -> String? {
+        let data: Data
+        do { data = try Data(contentsOf: file ?? applicationFile) }
+        catch let error as CocoaError where error.code == .fileReadNoSuchFile { return nil }
+        guard let key = String(data: data, encoding: .utf8) else {
+            throw AppError.message("本地密钥文件不是有效 UTF-8，请在 AI 设置中重新保存密钥。")
         }
         return key
     }
 
-    /// Replace the existing key, or delete it when the user explicitly clears it.
-    static func save(_ key: String) throws {
+    /// Atomically replace the key inside a mode-0700 directory, or delete it for an empty save.
+    static func save(_ key: String, file: URL? = nil) throws {
+        let destination = file ?? applicationFile
+        let manager = FileManager.default
         if key.isEmpty {
-            let status = SecItemDelete(query as CFDictionary)
-            guard status == errSecSuccess || status == errSecItemNotFound else { throw failure(status) }
+            do { try manager.removeItem(at: destination) }
+            catch let error as CocoaError where error.code == .fileNoSuchFile { return }
             return
         }
-        let data = Data(key.utf8)
-        let status = SecItemUpdate(query as CFDictionary, [kSecValueData as String: data] as CFDictionary)
-        if status == errSecItemNotFound {
-            var request = query
-            request[kSecValueData as String] = data
-            request[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
-            let addStatus = SecItemAdd(request as CFDictionary, nil)
-            guard addStatus == errSecSuccess else { throw failure(addStatus) }
-        } else if status != errSecSuccess { throw failure(status) }
-    }
-
-    private static func failure(_ status: OSStatus) -> AppError {
-        .message("钥匙串操作失败（\(status)），请检查系统提示后重试。")
+        let directory = destination.deletingLastPathComponent()
+        try manager.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        // Restrict an existing directory before an atomic write creates its temporary file.
+        try manager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directory.path)
+        try Data(key.utf8).write(to: destination, options: .atomic)
+        try manager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: destination.path)
     }
 }
 

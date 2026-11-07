@@ -34,9 +34,9 @@ System Settings may show an enabled entry while the current ad hoc build reports
 
 ## MVP conventions
 - `Analysis.swift` owns the OpenAI-compatible request, normal JSON-content parsing, HTTP/body-safe errors and redirect refusal. Full endpoints are not joined with extra `/v1` segments.
-- `Storage.swift` owns Keychain and atomic Codable notebook persistence. Corruption preserves the original file and blocks writes.
+- `Storage.swift` owns per-user local credential files and atomic Codable notebook persistence. Corruption preserves the original file and blocks writes.
 - `main.swift` owns native AppKit windows and one cancellation/generation boundary across AX capture and AI work. Closed windows never reopen from network results.
-- Keychain data is bound to a normalized HTTPS origin via nonsecret preferences; changing providers requires a new key. Secure fields are never prefilled from Keychain and are cleared on close.
+- Local credential data is bound to a normalized HTTPS origin via nonsecret preferences; changing providers requires a new key. Secure fields are never prefilled from storage and are cleared on close.
 - `bash Probe/test.sh` exercises mock HTTP success, errors, malformed results, timeout/cancel and notebook persistence/delete/corruption without network.
 
 ## Dictionary popup presentation
@@ -76,5 +76,14 @@ System Settings may show an enabled entry while the current ad hoc build reports
 6. **Tests:** inspect serialized requests for both known models, uppercase official host, lookalike host, proxy host, and unknown/legacy model. Preserve existing live schema, timeout/cancel and historical persistence checks. Verify runtime reuse and new request timing separately from hardware trigger evidence.
 7. **Wrong vs correct:** do not treat a UI observation timestamp as exact service duration or claim a percentage improvement from one request. Measure with monotonic uptime; display completed AI seconds and AX duration without logging source/key. Keep the single cached result in memory only; no disk cache or saved credentials in it.
 
-### Credential wait must not block analysis UI
+### Credential wait must not block analysis UI (v0.8 lesson)
 `KeyStore.readAsync(using:)` dispatches reads on one serial queue; tests inject a fake reader and never access live credentials. Publish waiting status before awaiting; analysisTask covers both credential lookup and HTTP. After lookup, check task cancellation and request generation before starting any HTTP call, and again before publishing/caching. Cancellation cannot dismiss an OS permission prompt, but the popup must remain responsive. Include credential wait in completed action duration; report AI duration separately. Do not bypass SecurityAgent or modify Keychain ACLs to hide ad hoc signing prompts. Never claim provider latency from a stack blocked in securityd before HTTP.
+
+## Local credential storage revision (user-approved)
+1. **Scope / trigger:** user explicitly chose local configuration instead of repeated Keychain password prompts. This supersedes the original Keychain implementation; old item remains untouched, no migration or ACL changes.
+2. **Signatures:** `KeyStore.read(file: URL? = nil) throws -> String?`; `save(_:file:) throws`; existing `readAsync(using:)` retains background/cancellation semantics.
+3. **Contract:** plaintext UTF8 at `~/Library/Application Support/SelectEnglish/Private/api-key`, outside repo. Directory0700 enforced before atomic replacement; final file0600. Missing returns nil; empty save deletes. Origin binding stays in nonsecret preferences. User re-enters once after upgrade; secure fields never prefill from storage.
+4. **Validation / errors:** ignore only specific missing-file errors; invalid UTF8 and other I/O errors propagate visibly. Settings save/delete invalidates tasks and clears result reuse. Check generation/cancellation after async read before sending HTTP.
+5. **Cases:** Good: user saves once locally and subsequent requests require no Keychain. Base: absent file prompts configuration and sends no AI. Bad: silently read old Keychain, store key in repo, or weaken system ACLs to hide prompts.
+6. **Tests:** use injected temporary file URLs/fake values, not user credentials; missing/save/replace/reopen/delete, permissions on existing directory/replacement, UTF8/I/O failures. Preserve service/history/async cancel checks. Native single-sample timing and filesystem metadata are separate evidence; never read actual key through diagnostic tools.
+7. **Wrong vs correct:** never log, prefill, embed or commit credential values. Store only in the per-user runtime directory, ignore accidental `Private/`/`api-key` copies, and scan source/history before push. Explicitly disclose local plaintext storage rather than calling it Keychain encryption.
