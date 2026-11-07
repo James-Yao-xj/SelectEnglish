@@ -7,3 +7,6 @@ swiftc -module-cache-path "$probe_tests/module-cache" Probe/Sources/GestureGate.
 "$probe_tests/gesture-tests"
 swiftc -parse-as-library -module-cache-path "$probe_tests/module-cache" Probe/Sources/Analysis.swift Probe/Sources/Storage.swift Probe/Tests/Services/main.swift -framework Security -o "$probe_tests/service-tests"
 "$probe_tests/service-tests"
+
+swiftc -module-cache-path "$probe_tests/module-cache" Probe/Sources/PopupGeometry.swift Probe/Tests/Geometry/main.swift -o "$probe_tests/geometry-tests"
+"$probe_tests/geometry-tests"

@@ -34,3 +34,16 @@ User approved Force Click feasibility followed by the native MVP. Force Click â†
 - `plutil -lint Probe/Info.plist`.
 
 Do not rebuild the working signed application for documentation-only changes. Keep real-provider and browser checks separate from offline test results. Preserve the evidence in research/.
+
+## Current authorized refinement: dictionary-style popup
+- [x] Replace large result window with compact native floating panel, anchored to trigger pointer.
+- [x] Remove automatic result window on launch; keep menu bar entry.
+- [x] Add bounded placement and scrollable translation/expression layout, outside-click/Esc/close dismissal.
+- [x] Verify cancellation and late response cannot reopen the popup; keep AI/settings/storage behavior unchanged.
+- [x] Compile and independently review; check actual native popup layout, settings/diagnostics access, Esc and outside-click with CUA.
+
+## Dictionary presentation refinement checkpoint
+- v0.5 preserved at `.build/verified-v0.5/` before rebuilding.
+- Compact NSPanel, native material, pointer anchor, screen bounds, local Esc/outside dismissal and cancellation implemented; no startup result window.
+- Core service tests and geometry tests passed; candidate full compilation passed.
+- Final signed v0.6 will be frozen for main-session native visual QA; no real user-configured AI request was made by implementer.

@@ -2,7 +2,7 @@ import AppKit
 
 /// Observe the verified passive session stream. All callbacks run on the main run loop.
 final class ForceClickMonitor {
-    var onTrigger: ((NSRunningApplication) -> Void)?
+    var onTrigger: ((NSRunningApplication, CGPoint) -> Void)?
     var onStatusChange: (() -> Void)?
     private var tap: CFMachPort?
     private var source: CFRunLoopSource?
@@ -58,7 +58,8 @@ final class ForceClickMonitor {
         guard gate.receive(stage: cocoa.stage), let app = NSWorkspace.shared.frontmostApplication,
               app.processIdentifier != ProcessInfo.processInfo.processIdentifier else { return }
         triggers += 1
-        DispatchQueue.main.async { [weak self] in self?.onTrigger?(app) }
+        let point = NSEvent.mouseLocation
+        DispatchQueue.main.async { [weak self] in self?.onTrigger?(app, point) }
     }
 
     deinit { stop() }

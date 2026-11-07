@@ -8,14 +8,15 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private let readerQueue = DispatchQueue(label: "com.selectenglish.selection")
     private let client = AnalysisClient()
     private let notebook = NotebookStore.applicationStore()
-    private var resultWindow: NSWindow!
+    private var popup: ResultPopup!
+    private var popupAnchor: CGPoint?
     private var settingsWindow: NSWindow!
     private var notebookWindow: NSWindow!
     private var diagnosticsWindow: NSWindow!
-    private let sourceView = NSTextView()
-    private let resultView = NSTextView()
-    private let stateLabel = NSTextField(wrappingLabelWithString: "选中英文后，用力点按触控板即可翻译。")
-    private let sourceLabel = NSTextField(wrappingLabelWithString: "原文")
+    private var sourceView: NSTextView { popup.sourceView }
+    private var resultView: NSTextView { popup.resultView }
+    private var stateLabel: NSTextField { popup.stateLabel }
+    private var sourceLabel: NSTextField { popup.sourceLabel }
     private let endpointField = NSTextField()
     private let modelField = NSTextField()
     private let keyField = NSSecureTextField()
@@ -40,7 +41,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         makeSettingsWindow()
         makeNotebookWindow()
         makeDiagnosticsWindow()
-        monitor.onTrigger = { [weak self] app in self?.capture(app: app, automaticallyAnalyze: true) }
+        monitor.onTrigger = { [weak self] app, point in self?.capture(app: app, automaticallyAnalyze: true, anchor: point) }
         monitor.onStatusChange = { [weak self] in self?.refreshDiagnostics() }
         monitor.start()
         diagnosticTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
@@ -48,7 +49,6 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
             self.refreshDiagnostics()
         }
         if let error = notebook.loadError { notebookState.stringValue = error }
-        showResult()
     }
 
     private func makeMenu() {
@@ -57,6 +57,16 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         mainMenu.addItem(root)
         let appMenu = NSMenu()
         appMenu.addItem(withTitle: "退出 SelectEnglish", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let showItem = NSMenuItem(title: "显示翻译", action: #selector(showResult), keyEquivalent: "t")
+        showItem.keyEquivalentModifierMask = [.command, .shift]
+        showItem.target = self
+        appMenu.insertItem(showItem, at: 0)
+        for (index, entry) in [("AI 设置…", #selector(showSettings)), ("我的收藏…", #selector(showNotebook)),
+                               ("触发与选区状态…", #selector(showDiagnostics))].enumerated() {
+            let item = NSMenuItem(title: entry.0, action: entry.1, keyEquivalent: index == 0 ? "," : "")
+            item.target = self
+            appMenu.insertItem(item, at: index + 1)
+        }
         root.submenu = appMenu
         let editRoot = NSMenuItem()
         let editMenu = NSMenu(title: "编辑")
@@ -131,18 +141,12 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func makeResultWindow() {
-        let (window, stack) = window(title: "SelectEnglish · 翻译与表达", width: 760, height: 720)
-        resultWindow = window
-        window.delegate = self
-        stack.addArrangedSubview(stateLabel)
-        stack.addArrangedSubview(sourceLabel)
-        stack.addArrangedSubview(scroll(sourceView, height: 110))
-        stack.addArrangedSubview(NSTextField(labelWithString: "中文翻译与英文表达"))
-        stack.addArrangedSubview(scroll(resultView, height: 280))
-        stack.addArrangedSubview(buttons([("分析 / 重试", #selector(analyze)), ("取消", #selector(cancel)),
-                                         ("收藏这次结果", #selector(saveFavorite)), ("我的收藏", #selector(showNotebook)),
-                                         ("AI 设置", #selector(showSettings)), ("触发状态", #selector(showDiagnostics))]))
-        finishLayout(stack)
+        popup = ResultPopup()
+        popup.onDismiss = { [weak self] in self?.invalidate() }
+        popup.onRetry = { [weak self] in self?.analyze() }
+        popup.onCancel = { [weak self] in self?.cancel() }
+        popup.onFavorite = { [weak self] in self?.saveFavorite() }
+        popup.onSettings = { [weak self] in self?.showSettings() }
     }
 
     private func makeSettingsWindow() {
@@ -186,7 +190,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         finishLayout(stack)
     }
 
-    @objc private func showResult() { show(resultWindow) }
+    @objc private func showResult() { popup.show(at: popupAnchor ?? NSEvent.mouseLocation) }
     @objc private func showSettings() {
         endpointField.stringValue = UserDefaults.standard.string(forKey: "ai.endpoint") ?? ""
         modelField.stringValue = UserDefaults.standard.string(forKey: "ai.model") ?? ""
@@ -240,7 +244,8 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     /// Capture before opening the window. A newer action invalidates this AX result.
-    private func capture(app: NSRunningApplication, automaticallyAnalyze: Bool) {
+    private func capture(app: NSRunningApplication, automaticallyAnalyze: Bool, anchor: CGPoint = NSEvent.mouseLocation) {
+        popupAnchor = anchor
         invalidate()
         let requestGeneration = generation
         currentSource = ""
@@ -256,10 +261,14 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
             DispatchQueue.main.async {
                 guard let self, self.generation == requestGeneration else { return }
                 self.lastCapture = "\(name) · \(result.role) · \(result.message)"
-                self.stateLabel.stringValue = result.message
+                if result.text.isEmpty {
+                    self.stateLabel.stringValue = AXIsProcessTrusted()
+                        ? "没有读到选中文字。请重新选中英文后用力点按，或在菜单栏查看触发状态。"
+                        : "请从菜单栏“译”打开触发状态，授权辅助功能后重试。"
+                } else { self.stateLabel.stringValue = "已读取选区。" }
                 self.currentSource = result.text
                 self.sourceView.string = result.text
-                self.sourceLabel.stringValue = "原文 · \(name) · \(result.text.count) 字符"
+                self.sourceLabel.stringValue = "SelectEnglish · \(name)"
                 self.refreshDiagnostics()
                 self.showResult()
                 if automaticallyAnalyze && !result.text.isEmpty { self.analyze() }
@@ -269,6 +278,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     /// Send only the current selected text to the user-configured service.
     @objc private func analyze() {
+        defer { popup.refresh() }
         invalidate()
         currentAnalysis = nil
         resultView.string = ""
@@ -286,7 +296,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 let result = try await self.client.analyze(text: text, configuration: settings.0, key: settings.1)
                 guard self.generation == requestGeneration, !Task.isCancelled else { return }
                 self.currentAnalysis = result
-                self.resultView.string = result.displayText
+                self.popup.display(result)
                 self.stateLabel.stringValue = "完成。可收藏到本机。"
             } catch {
                 guard self.generation == requestGeneration, !Task.isCancelled else { return }
@@ -294,7 +304,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
                     self.stateLabel.stringValue = "请求超时（60 秒），请重试。"
                 } else { self.stateLabel.stringValue = "分析失败：\(error.localizedDescription)" }
             }
-            if self.generation == requestGeneration { self.analysisTask = nil }
+            if self.generation == requestGeneration { self.analysisTask = nil; self.popup.refresh() }
         }
     }
 
@@ -304,13 +314,13 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         analysisTask = nil
     }
 
-    @objc private func cancel() { invalidate(); stateLabel.stringValue = "已取消，点击分析可重试。" }
+    @objc private func cancel() { invalidate(); stateLabel.stringValue = "已取消，可点击重试。"; popup.refresh() }
     func windowWillClose(_ notification: Notification) {
-        if notification.object as? NSWindow === resultWindow { invalidate() }
         if notification.object as? NSWindow === settingsWindow { keyField.stringValue = "" }
     }
 
     @objc private func saveFavorite() {
+        defer { popup.refresh() }
         guard let result = currentAnalysis else { stateLabel.stringValue = "分析完成后才能收藏。"; return }
         do { try notebook.save(source: currentSource, analysis: result); stateLabel.stringValue = "已收藏到本机。" }
         catch { stateLabel.stringValue = error.localizedDescription }
@@ -364,6 +374,11 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc private func readTarget() {
         guard let item = diagnosticTarget.selectedItem, let app = NSRunningApplication(processIdentifier: pid_t(item.tag)) else { return }
         capture(app: app, automaticallyAnalyze: false)
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag { showResult() }
+        return false
     }
 
     func applicationDidBecomeActive(_ notification: Notification) { refreshDiagnostics() }

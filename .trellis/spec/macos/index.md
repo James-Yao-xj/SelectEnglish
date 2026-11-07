@@ -13,7 +13,7 @@
 - Report AX errors explicitly; never present stale selection as current.
 - Verify physical Force Click in TextEdit and a browser with user assistance.
 - Do not claim global pressure delivery from a local-window test.
-- Physical TextEdit Force Click plus full selection passed. Browser compatibility and a real configured provider remain QA items.
+- Physical TextEdit and Chrome Force Click selection passed in v0.4/v0.5. Native popup presentation and dismissal passed separately in v0.6. A real configured provider remains a QA item.
 
 ## Probe conventions
 - `Probe/Sources/GestureGate.swift` triggers once at stage 2 and resets at stage 0 or mouse-up. Reversing from stage 2 to stage 1 must not rearm.
@@ -38,3 +38,10 @@ System Settings may show an enabled entry while the current ad hoc build reports
 - `main.swift` owns native AppKit windows and one cancellation/generation boundary across AX capture and AI work. Closed windows never reopen from network results.
 - Keychain data is bound to a normalized HTTPS origin via nonsecret preferences; changing providers requires a new key. Secure fields are never prefilled from Keychain and are cleared on close.
 - `bash Probe/test.sh` exercises mock HTTP success, errors, malformed results, timeout/cancel and notebook persistence/delete/corruption without network.
+
+## Dictionary popup presentation
+- `ResultPopup.swift` owns the borderless nonactivating NSPanel and native popover material. Show only after AX capture or an explicit user open action; never on startup.
+- Snapshot pointer with source app at pressure stage 2. `PopupGeometry.swift` selects the containing full screen before clamping to its visibleFrame; handle negative-origin and adjacent monitors.
+- Keep AX diagnostics in the status window. Popup messages use actionable plain language, not AX names or stage counts.
+- A nonactivating key panel accepts local Esc/copy without NSApp.activate. Outside local/global mouse clicks dismiss and invalidate in-flight AX/AI work. No global key monitor is added.
+- Network updates refresh the retained anchor without ordering a dismissed panel front. Settings, notebook, and diagnostics remain menu-bar windows.

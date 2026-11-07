@@ -6,7 +6,7 @@
 <key>CFBundleName</key><string>SelectEnglishProbe</string>
 <key>CFBundleExecutable</key><string>SelectEnglishProbe</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleVersion</key><string>5</string>
-<key>CFBundleShortVersionString</key><string>0.5</string>
+<key>CFBundleVersion</key><string>6</string>
+<key>CFBundleShortVersionString</key><string>0.6</string>
 <key>NSHighResolutionCapable</key><true/>
 </dict></plist>

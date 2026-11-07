@@ -9,11 +9,11 @@ bash Probe/build.sh
 open .build/probe/SelectEnglishProbe.app
 ```
 
-需要 macOS、Force Touch 触控板与 Xcode Command Line Tools。点击结果窗口的“触发状态”可授权辅助功能并检查监听。关闭窗口后应用仍在菜单栏“译”中运行；从菜单可退出。
+需要 macOS、Force Touch 触控板与 Xcode Command Line Tools。启动后只有菜单栏“译”，不自动弹出结果。选中文字后用力点按，会在指针附近出现原生词典式小浮层。菜单栏“译 → 触发与选区状态”可授权辅助功能并检查监听。点击浮层外部、按 Esc 或点击 × 可关闭；关闭时取消未完成请求。设置、收藏与诊断从菜单栏打开。
 
-首次运行请在“AI 设置”填写完整 HTTPS `/chat/completions` 接口地址、模型名和 API 密钥。未配置不会发送文字。保存有效配置后，重按会自动分析所选原文；也可点击“分析 / 重试”。最长 20,000 字符，超时 60 秒。服务需要支持非流式 OpenAI 兼容 chat completions；密钥仅写入系统钥匙串，更换服务域名必须重新输入密钥。
+首次运行请在“AI 设置”填写完整 HTTPS `/chat/completions` 接口地址、模型名和 API 密钥。未配置不会发送文字。保存有效配置后，重按会自动分析所选原文；也可点击浮层“重试”。最长 20,000 字符，超时 60 秒。服务需要支持非流式 OpenAI 兼容 chat completions；密钥仅写入系统钥匙串，更换服务域名必须重新输入密钥。
 
-结果包含中文翻译、原文中的有用表达、中文释义与用法、英文例句。短原文可以少于 3 个表达。点击“收藏这次结果”才会保存原文与分析；“我的收藏”可查看及删除。
+结果包含中文翻译、原文中的有用表达、中文释义与用法、英文例句。短原文可以少于 3 个表达。点击浮层“收藏”才会保存原文与分析；“我的收藏”可查看及删除。
 
 收藏位于 `~/Library/Application Support/SelectEnglish/notebook.json`。自动分析结果不落盘；收藏文件损坏时保留原文件并阻止覆盖。接口失败不记录响应正文或密钥。
 
@@ -30,3 +30,8 @@ open .build/probe/SelectEnglishProbe.app
 阅读 `AGENTS.md` 与 `.trellis/workflow.md`；活动任务为 `.trellis/tasks/11-07-selection-mvp/`。
 
 GitHub 私有仓库：https://github.com/James-Yao-xj/SelectEnglish 。源码已推送至 main。
+
+## v0.6 词典式浮层
+结果使用约 420 宽、不超过 520 高的原生非激活浮层：简短原文预览、中文翻译和表达在内部滚动，小型重试/收藏/取消/设置/关闭控件。位置取自真正重按时的指针，限制在对应屏幕可用区域；网络返回时围绕同一锚点更新，不居中弹出普通应用窗口。
+浮层不激活整个应用；仅成为非激活 key panel 以支持本地 Esc 与复制。没有全局键盘监听。用户显式通过菜单“显示翻译”或应用本地快捷键 Cmd+Shift+T 可打开上次结果，不会重新发送 AI 请求。
+测试新增浮层角落、多屏负坐标、屏幕菜单条与锚点稳定性。
