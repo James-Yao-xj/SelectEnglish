@@ -20,10 +20,12 @@ User approved Force Click feasibility followed by the native MVP. Force Click â†
 - [x] CUA checked settings layout, empty-setting validation and empty favorites window.
 - [x] v0.5 live process confirms AX authorized and passive monitor enabled after approved reauthorization.
 
+- [x] User approved two work commits; pushed to GitHub main and verified remote feature SHA e167aef.
+
 ## Remaining
 - [x] Physical Chrome Force Click â†’ 40-character selected text captured by v0.5; no configured AI, no request sent.
 - [ ] User fills their service configuration in application; real provider request remains unverified.
-- [ ] Review and approve concrete commit plan, commit, push and Trellis archive/session bookkeeping.
+- [ ] Archive after the real-provider check is completed or explicitly deferred.
 
 ## Verification commands
 - `bash Probe/test.sh`: gate and offline mock service/persistence checks.

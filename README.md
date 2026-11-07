@@ -29,4 +29,4 @@ open .build/probe/SelectEnglishProbe.app
 
 阅读 `AGENTS.md` 与 `.trellis/workflow.md`；活动任务为 `.trellis/tasks/11-07-selection-mvp/`。
 
-GitHub 私有仓库：https://github.com/James-Yao-xj/SelectEnglish 。尚未提交推送。
+GitHub 私有仓库：https://github.com/James-Yao-xj/SelectEnglish 。源码已推送至 main。

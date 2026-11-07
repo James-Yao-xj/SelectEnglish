@@ -15,12 +15,12 @@
   "branch": "main",
   "base_branch": "main",
   "worktree_path": null,
-  "commit": null,
+  "commit": "e167aef66553dd4e5500cda9141f34ea3755e7de",
   "pr_url": null,
   "subtasks": [],
   "children": [],
   "parent": null,
   "relatedFiles": [],
-  "notes": "",
+  "notes": "v0.5 implemented and pushed. TextEdit and Chrome Force Click selection verified. Real AI-provider validation pending user settings; keep task in progress.",
   "meta": {}
 }
