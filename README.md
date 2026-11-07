@@ -4,9 +4,9 @@ MacBook 原生菜单栏工具：选中英文 → 触控板用力点按 → 中�
 
 ## 安装最新版
 
-从 [GitHub Releases](https://github.com/James-Yao-xj/SelectEnglish/releases/latest) 下载 `SelectEnglish-v0.9.zip`，解压后把 `SelectEnglish.app` 拖到“应用程序”，双击启动。正式安装路径为 `/Applications/SelectEnglish.app`。不要同时运行开发构建或旧副本。发布页同时提供 SHA256 校验文件。
+从 [GitHub Releases](https://github.com/James-Yao-xj/SelectEnglish/releases/latest) 下载 `SelectEnglish-v0.9.1.zip`，解压后把 `SelectEnglish.app` 拖到“应用程序”，双击启动。正式安装路径为 `/Applications/SelectEnglish.app`。不要同时运行开发构建或旧副本。发布页同时提供 SHA256 校验文件。
 
-本机已安装 v0.9；旧测试应用与旧安装包已移到废纸篓。配置、API 密钥和收藏保留在用户的 Application Support 目录，升级只替换应用本身。已配置的本地密钥无需重新输入；从钥匙串旧版首次升级仍需输入一次。
+本机已安装 v0.9.1；旧测试应用与旧安装包已移到废纸篓。配置、API 密钥和收藏保留在用户的 Application Support 目录，升级只替换应用本身。已配置的本地密钥无需重新输入；从钥匙串旧版首次升级仍需输入一次。
 
 ## 从源码构建
 
@@ -54,3 +54,9 @@ GitHub 私有仓库：https://github.com/James-Yao-xj/SelectEnglish 。源码已
 API 密钥保存于 `~/Library/Application Support/SelectEnglish/Private/api-key`，与项目和 Git 仓库分离，不再使用钥匙串，也不会读取、迁移或删除旧钥匙串项目。升级后请在 AI 设置重新输入一次密钥。文件为明文，私有目录 0700、密钥文件 0600，仅当前用户可读写；不显示已存密钥，不写日志。点击“删除已保存密钥”只删除本地文件。
 
 本机 v0.9 验证：用户在设置中保存本地配置后，80 字符公开样例读取用时0.01秒，真实 DeepSeek 请求完成用时1.9秒，无钥匙串密码提示。该数值仅代表单次样例，网络与服务负载会影响实际时间。
+
+## v0.9.1 审查修复
+- 单词分析必须包含所选词本身，支持大小写与边界标点归一化，保留词内连字符、撇号及词形；不接受无关词条。
+- 弹窗尚未出现、选区仍在读取时，后续点击可取消；过期读取不能再弹窗或开始 AI 请求。延迟送达的原始点击不会误关新结果。
+- 更新 Probe 说明，明确自动 AI 请求、离线测试和手动选区诊断的区别；补充词条对应及点击取消/事件顺序回归。
+从 v0.9 升级会保留本机接口配置、密钥与收藏，无需重新输入 API Key。开发版签名更新后，macOS 可能要求重新确认辅助功能与输入监听。

@@ -24,6 +24,8 @@ final class ResultPopup: NSObject {
     private let resultScroll = NSScrollView()
     private var localMonitor: Any?
     private var globalMonitor: Any?
+    private var dismissalState = PopupDismissalState()
+    var hasPendingCapture: Bool { dismissalState.hasPendingCapture }
     /// Retain the actual trigger position so network updates do not recenter the popup.
     private var anchor = CGPoint.zero
 
@@ -97,16 +99,32 @@ final class ResultPopup: NSObject {
         stack.addArrangedSubview(footer)
         for child in stack.arrangedSubviews { child.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true }
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .keyDown]) { [weak self] event in
-            guard let self, self.panel.isVisible else { return event }
+            guard let self else { return event }
             if event.type == .keyDown {
-                if event.keyCode == 53 { self.dismiss(); return nil }
-            } else if !self.panel.frame.contains(NSEvent.mouseLocation) { self.dismiss() }
+                if self.panel.isVisible && event.keyCode == 53 { self.dismiss(); return nil }
+            } else { self.handleMouseDown(event) }
             return event
         }
-        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            guard let self, self.panel.isVisible, !self.panel.frame.contains(NSEvent.mouseLocation) else { return }
-            self.dismiss()
+        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+            self?.handleMouseDown(event)
         }
+
+    }
+
+    func beginCapture(generation: Int, startedAt: TimeInterval) {
+        dismissalState.beginCapture(generation: generation, startedAt: startedAt)
+    }
+
+    func completeCapture(generation: Int) -> Bool {
+        dismissalState.completeCapture(generation: generation)
+    }
+
+    func invalidateCapture() { dismissalState.invalidateCapture() }
+
+    /// Both event monitors use the same decision, including when AX is pending but hidden.
+    private func handleMouseDown(_ event: NSEvent) {
+        if dismissalState.shouldDismissMouseDown(timestamp: event.timestamp, popupVisible: panel.isVisible,
+            pointInsidePopup: panel.frame.contains(NSEvent.mouseLocation)) { dismiss() }
     }
 
     private func configure(_ view: NSTextView, in scroll: NSScrollView) {

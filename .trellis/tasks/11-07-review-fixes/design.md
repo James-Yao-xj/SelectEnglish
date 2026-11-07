@@ -1,0 +1,6 @@
+# Boundary and approach
+Three bounded fixes: Analysis.swift validation+Services regression, Probe README operating instructions, and pending capture/click dismissal in ResultPopup.swift/main.swift plus a small pure shared dismissal state helper and tests as needed. Version0.9.1/build10.
+
+For capture: mark observation after invalidation and before queueing AX. Record monotonic start time; only later mouse-down events count, so a delayed callback for the initiating click cannot cancel its own Force Click. While capture is pending and panel hidden, any later mouse-down is click-away. Once shown, retain normal inside/outside behavior. Clear pending state only through current generation completion/invalidation; an old callback must not clear a newer capture. Dismiss callback shows canceled state for pending AX as well as AI. Existing generation guard remains before showing and automatic analysis. Centralize local/global mouse decision so real production behavior is directly unit-testable, no synthetic global input or real AX/network in offline tests.
+
+Scope excludes new transport, streaming, storage changes, unrelated refactor, changed gesture gate/event mask or default provider. Main owns final signed build/install/native permission checking and release; implement/check agents compile candidates only.

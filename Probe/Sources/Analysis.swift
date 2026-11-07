@@ -38,9 +38,24 @@ struct Analysis: Codable, Equatable {
               expressions.allSatisfy({ [$0.phrase, $0.meaning, $0.usage, $0.example].allSatisfy(hasText) }) else {
             throw AppError.message("AI 返回的生词、整句解释或固定表达字段不完整，请重试。")
         }
-        if let source, source.split(whereSeparator: { $0.isWhitespace }).count == 1,
-           source.unicodeScalars.contains(where: { CharacterSet.letters.contains($0) }), vocabulary.isEmpty {
-            throw AppError.message("单词分析未返回词性和释义，请重试。")
+        if let source {
+            let boundaries = CharacterSet.whitespacesAndNewlines.union(.punctuationCharacters)
+            // Trim only boundaries. Internal punctuation and inflections stay intact.
+            func normalized(_ word: String) -> String { word.trimmingCharacters(in: boundaries).lowercased() }
+            let selectedWord = normalized(source)
+            let scalars = Array(selectedWord.unicodeScalars)
+            let lettersAndMarks = CharacterSet.letters.union(.nonBaseCharacters)
+            let connectors = CharacterSet(charactersIn: "-'’‐‑")
+            // Commas and slashes can separate a fragment's words even without spaces.
+            let isSingleWord = scalars.contains(where: { CharacterSet.letters.contains($0) })
+                && scalars.enumerated().allSatisfy { index, scalar in
+                    lettersAndMarks.contains(scalar) || (connectors.contains(scalar) && index > 0
+                        && index + 1 < scalars.count && lettersAndMarks.contains(scalars[index - 1])
+                        && lettersAndMarks.contains(scalars[index + 1]))
+                }
+            if isSingleWord && !vocabulary.contains(where: { normalized($0.word) == selectedWord }) {
+                throw AppError.message("单词分析未返回所选单词的词性和释义，请重试。")
+            }
         }
         return self
     }

@@ -146,7 +146,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         popup = ResultPopup()
         popup.onDismiss = { [weak self] in
             guard let self else { return }
-            if self.analysisTask != nil {
+            if self.analysisTask != nil || self.popup.hasPendingCapture {
                 self.stateLabel.stringValue = "已取消，可点击重试。"
                 self.popup.refresh()
             }
@@ -270,11 +270,13 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let launchDate = app.launchDate
         let name = app.localizedName ?? "目标应用"
         let captureStarted = ProcessInfo.processInfo.systemUptime
+        popup.beginCapture(generation: requestGeneration, startedAt: captureStarted)
         readerQueue.async { [weak self] in
             let result = SelectionReader.read(pid: pid, launchDate: launchDate)
             let readSeconds = ProcessInfo.processInfo.systemUptime - captureStarted
             DispatchQueue.main.async {
                 guard let self, self.generation == requestGeneration else { return }
+                guard self.popup.completeCapture(generation: requestGeneration) else { return }
                 self.lastCapture = "\(name) · \(result.role) · \(result.message)（读取 \(String(format: "%.2f", readSeconds)) 秒）"
                 if result.text.isEmpty {
                     self.stateLabel.stringValue = AXIsProcessTrusted()
@@ -344,6 +346,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func invalidate() {
         generation += 1
+        popup?.invalidateCapture()
         analysisTask?.cancel()
         analysisTask = nil
     }

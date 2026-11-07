@@ -10,3 +10,6 @@ swiftc -parse-as-library -module-cache-path "$probe_tests/module-cache" Probe/So
 
 swiftc -module-cache-path "$probe_tests/module-cache" Probe/Sources/PopupGeometry.swift Probe/Tests/Geometry/main.swift -o "$probe_tests/geometry-tests"
 "$probe_tests/geometry-tests"
+
+swiftc -module-cache-path "$probe_tests/module-cache" Probe/Sources/PopupDismissalState.swift Probe/Tests/Dismissal/main.swift -o "$probe_tests/dismissal-tests"
+"$probe_tests/dismissal-tests"

@@ -173,9 +173,27 @@ func check(_ condition: @autoclosure () -> Bool, _ message: String) throws {
         try check(analysis.displayText.contains("[动词（动名词形式）]") && analysis.displayText.contains("这是一个短语"), "contextual POS and sentence explanation visible")
         let singleWord = Analysis(translation: "开心的", expressions: [], vocabulary: [.init(word: "Happy", partOfSpeech: "形容词", meaning: "开心的；快乐的")], sentenceExplanation: "这里只选中了一个形容词，表示开心或快乐。")
         _ = try singleWord.validated(source: "Happy")
+        for source in ["happy", "HAPPY!", "“Happy!”", "(Happy)"] { _ = try singleWord.validated(source: source) }
+        let wrongWord = Analysis(translation: "开心", expressions: [], vocabulary: [.init(word: "banana", partOfSpeech: "名词", meaning: "香蕉")], sentenceExplanation: "这是单词。")
+        do { _ = try wrongWord.validated(source: "Happy"); throw AppError.message("accepted unrelated vocabulary") }
+        catch { try check(error.localizedDescription != "accepted unrelated vocabulary", "single word requires matching vocabulary, not merely nonempty array") }
+        let inflection = Analysis(translation: "开心", expressions: [], vocabulary: [.init(word: "happier", partOfSpeech: "形容词", meaning: "更开心")], sentenceExplanation: "这是单词。")
+        do { _ = try inflection.validated(source: "Happy"); throw AppError.message("accepted different inflection") }
+        catch { try check(error.localizedDescription != "accepted different inflection", "no stemming across distinct inflections") }
+        for (source, wrong) in [("well-being", "wellbeing"), ("can't", "cant")] {
+            let exact = Analysis(translation: "测试释义", expressions: [], vocabulary: [.init(word: source, partOfSpeech: "测试词性", meaning: "测试词义")], sentenceExplanation: "只有一个词。")
+            _ = try exact.validated(source: "“" + source + "!”")
+            let different = Analysis(translation: "测试释义", expressions: [], vocabulary: [.init(word: wrong, partOfSpeech: "测试词性", meaning: "测试词义")], sentenceExplanation: "只有一个词。")
+            do { _ = try different.validated(source: source); throw AppError.message("stripped internal punctuation") }
+            catch { try check(error.localizedDescription != "stripped internal punctuation", "internal hyphens and apostrophes preserved") }
+        }
+        print("PASS: exact single-word vocabulary, case/boundary punctuation and preserved inflection")
+
         try check(singleWord.displayText.contains("原文没有明显的固定表达。"), "single word can have no fixed expressions")
         let noWords = Analysis(translation: "他在。", expressions: [], vocabulary: [], sentenceExplanation: "这是一个简短陈述。")
         _ = try noWords.validated(source: "He is here.")
+        _ = try noWords.validated(source: "happy/sad")
+        _ = try noWords.validated(source: "Hello,world!")
         do { _ = try noWords.validated(source: "Happy"); throw AppError.message("accepted missing single word") }
         catch { try check(error.localizedDescription != "accepted missing single word", "single-word input requires its POS/meaning") }
         for invalid in [
