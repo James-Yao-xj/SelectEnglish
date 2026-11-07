@@ -3,6 +3,27 @@ import Security
 
 /// Keep the API key in the login keychain. No key is written to preferences.
 enum KeyStore {
+    /// Serialize async reads while securityd may wait for the user's system approval.
+    private static let readQueue = DispatchQueue(label: "com.selectenglish.keychain-read")
+
+    /// Read off the UI thread. Cancellation cannot dismiss a system permission prompt.
+    ///
+    /// Args:
+    ///   reader: The keychain read operation. Tests supply a fake operation without credentials.
+    /// Returns:
+    ///   The saved key, or nil when no key exists. A cancelled caller never receives a key.
+    static func readAsync(using reader: @escaping @Sendable () throws -> String? = { try KeyStore.read() }) async throws -> String? {
+        try Task.checkCancellation()
+        let value: String? = try await withCheckedThrowingContinuation { continuation in
+            readQueue.async {
+                do { continuation.resume(returning: try reader()) }
+                catch { continuation.resume(throwing: error) }
+            }
+        }
+        try Task.checkCancellation()
+        return value
+    }
+
     private static var query: [String: Any] {
         [kSecClass as String: kSecClassGenericPassword,
          kSecAttrService as String: "com.selectenglish.probe.ai",

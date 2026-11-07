@@ -1,0 +1,16 @@
+# Change boundary
+Current AnalysisClient omits thinking controls; official DeepSeek documentation says omission defaults to thinking enabled/high. Full response is buffered; this task first removes avoidable reasoning and excessive generation rather than changing transport protocol.
+## Implementation
+- Analysis.swift: only exact HTTPS api.deepseek.com host and known deepseek-flash/deepseek-v4-pro model names get thinking.type=disabled. Case-insensitive hostname, no suffix/subdomain matching. Do not change model or add provider options to proxies/custom endpoints. Compact prompt prose while retaining constraints; no token cap that truncates long selections.
+- main.swift: keep one last completed result in memory keyed by exact source+endpoint+model. Settings save/key deletion clear reuse; explicit popup Retry bypasses it. New captures keep generation checks before publishing/cache. Show completed elapsed AI seconds, reuse label, and AX duration diagnostics; no new timers or persistent telemetry.
+- Tests/Services/main.swift: verify real serialized request options for official/nonofficial hosts/model combinations. Existing service and history regressions stay green.
+- Info.plist v0.8; README/spec/research document observed behavior.
+## Exclusions
+No streaming/parser/schema rewrite, no disk cache, no provider/model switch, no network benchmark with extracted Keychain credentials. Final native build only once after review to limit ad hoc permission churn.
+
+## Observed credential wait extension
+Final native QA confirmed main thread waiting in KeyStore.read / SecItemCopyMatching / securityd decrypt before HTTP, with SecurityAgent present. This is a real responsive-UI defect, not provider elapsed time. Move analysis credential reads to a serial background queue; publish waiting status first. An analysis task spans credential wait and network; check generation/cancellation before any HTTP send after the read. Cache hits still avoid the read. Do not weaken Keychain ACLs, extract credentials, or bypass protected SecurityAgent. User handles the system confirmation. Build/review final code before asking to authorize final signed copy.
+
+## Native credential-wait finding
+Actual native sampling found `analyze → KeyStore.read → SecItemCopyMatching → securityd` waiting for the user's SecurityAgent approval on the main thread, before the AI task or network request existed. Do not bypass the system prompt. `KeyStore.readAsync` now uses one serial background queue and a checked continuation; cancellation is checked before scheduling and after the key returns. Tests inject fake readers, never real credentials.
+The analysis task now covers credential lookup plus HTTP. Show credential-wait status before starting it, then check generation/cancellation after the key returns and before dispatching HTTP. Completion reports total action duration (including credentials) and AI-only request duration. Memory reuse still skips credential reads. Unnecessary key-presence decrypt reads on opening settings and after saving were removed; instructions do not assert existing key presence. Explicit key save/delete writes remain unchanged. The signed app is not rebuilt until the current system interaction is resolved by the user.

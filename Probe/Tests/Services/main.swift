@@ -31,6 +31,25 @@ func check(_ condition: @autoclosure () -> Bool, _ message: String) throws {
 
 @main struct ServiceChecks {
     static func main() async throws {
+        let readThread = try await KeyStore.readAsync(using: { Thread.isMainThread ? "main" : "background" })
+        try check(readThread == "background", "credential read does not block the main thread")
+        let releaseReader = DispatchSemaphore(value: 0)
+        var pendingKey: Task<String?, Error>!
+        await withCheckedContinuation { (started: CheckedContinuation<Void, Never>) in
+            pendingKey = Task {
+                try await KeyStore.readAsync(using: {
+                    started.resume()
+                    releaseReader.wait()
+                    return "fake-test-value"
+                })
+            }
+        }
+        pendingKey.cancel()
+        releaseReader.signal()
+        do { _ = try await pendingKey.value; throw AppError.message("cancelled credential returned") }
+        catch { try check(error is CancellationError, "cancelled credential wait cannot return a key for a request") }
+        print("PASS: background credential read and post-read cancellation (fake reader only)")
+
         let config = URLSessionConfiguration.ephemeral
         config.protocolClasses = [MockProtocol.self]
         let session = URLSession(configuration: config)
@@ -73,6 +92,48 @@ func check(_ condition: @autoclosure () -> Bool, _ message: String) throws {
         let result = try await client.analyze(text: "keep asking", configuration: settings, key: "test-key")
         try check(result == analysis && checkedRequest, "decode fenced structured success and request contract")
         print("PASS: request contract and structured success")
+
+        let providerCases: [(String, String, Bool)] = [
+            ("https://api.deepseek.com/chat/completions", "deepseek-flash", true),
+            ("https://api.deepseek.com/v1/chat/completions", "deepseek-v4-pro", true),
+            ("https://API.DeepSeek.COM/chat/completions", "deepseek-flash", true),
+            ("https://proxy.invalid/chat/completions", "deepseek-flash", false),
+            ("https://api.deepseek.com.evil.invalid/chat/completions", "deepseek-v4-pro", false),
+            ("https://sub.api.deepseek.com/chat/completions", "deepseek-flash", false),
+            ("https://api.deepseek.com/chat/completions", "deepseek-chat", false),
+            ("https://api.deepseek.com/chat/completions", "deepseek-reasoner", false),
+            ("https://api.deepseek.com/chat/completions", "deepseek-v4-pro-extra", false),
+            ("https://api.deepseek.com/chat/completions", "DEEPSEEK-FLASH", false)
+        ]
+        for (endpoint, model, expectedThinkingControl) in providerCases {
+            MockProtocol.handler = { request in
+                let body: Data
+                if let direct = request.httpBody { body = direct }
+                else {
+                    let stream = request.httpBodyStream!
+                    stream.open()
+                    defer { stream.close() }
+                    var result = Data()
+                    var buffer = [UInt8](repeating: 0, count: 1024)
+                    while stream.hasBytesAvailable {
+                        let count = stream.read(&buffer, maxLength: buffer.count)
+                        if count <= 0 { break }
+                        result.append(buffer, count: count)
+                    }
+                    body = result
+                }
+                let object = try JSONSerialization.jsonObject(with: body) as! [String: Any]
+                if expectedThinkingControl {
+                    try check((object["thinking"] as? [String: String]) == ["type": "disabled"], "official current model uses explicit non-thinking")
+                } else { try check(object["thinking"] == nil, "custom host or unknown model gets no vendor option") }
+                try check(object["reasoning_effort"] == nil && object["max_tokens"] == nil, "no extra reasoning option or truncation cap")
+                try check(object["model"] as? String == model && request.url?.absoluteString == endpoint, "provider and model remain user configured")
+                return (200, envelope)
+            }
+            _ = try await client.analyze(text: "keep asking", configuration: AIConfiguration(endpoint: endpoint, model: model), key: "test-key")
+        }
+        print("PASS: serialized official DeepSeek host/model boundaries")
+
 
         let headings = analysis.displaySections.map(\.heading)
         try check(headings == ["生词", "整句解释", "固定表达"], "shared popup and notebook order")

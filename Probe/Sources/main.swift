@@ -30,6 +30,8 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var lastCapture = "尚未读取选区"
     private var currentSource = ""
     private var currentAnalysis: Analysis?
+    /// One completed result in memory only. Credentials and failures are never cached.
+    private var lastCompleted: (source: String, endpoint: String, model: String, result: Analysis)?
     /// Invalidates AX and AI results after a newer trigger, cancel, or window close.
     private var generation = 0
     private var analysisTask: Task<Void, Never>?
@@ -150,7 +152,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
             }
             self.invalidate()
         }
-        popup.onRetry = { [weak self] in self?.analyze() }
+        popup.onRetry = { [weak self] in self?.analyze(bypassReuse: true) }
         popup.onCancel = { [weak self] in self?.cancel() }
         popup.onFavorite = { [weak self] in self?.saveFavorite() }
         popup.onSettings = { [weak self] in self?.showSettings() }
@@ -202,8 +204,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         endpointField.stringValue = UserDefaults.standard.string(forKey: "ai.endpoint") ?? ""
         modelField.stringValue = UserDefaults.standard.string(forKey: "ai.model") ?? ""
         keyField.stringValue = ""
-        do { settingsState.stringValue = try KeyStore.read() == nil ? "尚未保存密钥" : "钥匙串中已保存密钥" }
-        catch { settingsState.stringValue = error.localizedDescription }
+        settingsState.stringValue = "密钥保存在系统钥匙串。留空可沿用已保存密钥；未保存过则需输入。"
         show(settingsWindow)
     }
     @objc private func showNotebook() { refreshNotebook(); show(notebookWindow) }
@@ -215,6 +216,8 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     @objc private func saveSettings() {
+        invalidate()
+        lastCompleted = nil
         do {
             let configuration = AIConfiguration(endpoint: endpointField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines),
                                                 model: modelField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines))
@@ -230,24 +233,27 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
             UserDefaults.standard.set(configuration.endpoint, forKey: "ai.endpoint")
             UserDefaults.standard.set(configuration.model, forKey: "ai.model")
             keyField.stringValue = ""
-            settingsState.stringValue = try KeyStore.read() == nil ? "地址和模型已保存，请再输入密钥。" : "已保存。下次重按或点击分析会向此接口发送原文。"
+            settingsState.stringValue = newKey.isEmpty
+                ? "地址和模型已保存；将沿用已有密钥（本次未检查）。若未保存过密钥，请输入后再保存。"
+                : "地址、模型和新密钥已保存。下次重按或点击分析会向此接口发送原文。"
         } catch { settingsState.stringValue = error.localizedDescription }
     }
 
     @objc private func deleteKey() {
+        invalidate()
+        lastCompleted = nil
         do { try KeyStore.save(""); keyField.stringValue = ""; settingsState.stringValue = "已删除密钥，不会再自动请求 AI。" }
         catch { settingsState.stringValue = error.localizedDescription }
     }
 
-    private func configuration() throws -> (AIConfiguration, String) {
+    private func configuration() throws -> AIConfiguration {
         let configuration = AIConfiguration(endpoint: UserDefaults.standard.string(forKey: "ai.endpoint") ?? "",
                                             model: UserDefaults.standard.string(forKey: "ai.model") ?? "")
         _ = try configuration.validatedURL()
         guard UserDefaults.standard.string(forKey: "ai.keyOrigin") == configuration.origin else {
             throw AppError.message("此服务尚未绑定密钥，请在 AI 设置中重新输入并保存。")
         }
-        guard let key = try KeyStore.read(), !key.isEmpty else { throw AppError.message("请先在 AI 设置中保存密钥。") }
-        return (configuration, key)
+        return configuration
     }
 
     /// Capture before opening the window. A newer action invalidates this AX result.
@@ -263,11 +269,13 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let pid = app.processIdentifier
         let launchDate = app.launchDate
         let name = app.localizedName ?? "目标应用"
+        let captureStarted = ProcessInfo.processInfo.systemUptime
         readerQueue.async { [weak self] in
             let result = SelectionReader.read(pid: pid, launchDate: launchDate)
+            let readSeconds = ProcessInfo.processInfo.systemUptime - captureStarted
             DispatchQueue.main.async {
                 guard let self, self.generation == requestGeneration else { return }
-                self.lastCapture = "\(name) · \(result.role) · \(result.message)"
+                self.lastCapture = "\(name) · \(result.role) · \(result.message)（读取 \(String(format: "%.2f", readSeconds)) 秒）"
                 if result.text.isEmpty {
                     self.stateLabel.stringValue = AXIsProcessTrusted()
                         ? "没有读到选中文字。请重新选中英文后用力点按，或在菜单栏查看触发状态。"
@@ -278,33 +286,52 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 self.sourceLabel.stringValue = "SelectEnglish · \(name)"
                 self.refreshDiagnostics()
                 self.showResult()
-                if automaticallyAnalyze && !result.text.isEmpty { self.analyze() }
+                if automaticallyAnalyze && !result.text.isEmpty { self.analyze(bypassReuse: false) }
             }
         }
     }
 
-    /// Send only the current selected text to the user-configured service.
-    @objc private func analyze() {
+    /// Reuse only the last exact result. The explicit Retry action always bypasses reuse.
+    private func analyze(bypassReuse: Bool) {
         defer { popup.refresh() }
         invalidate()
         currentAnalysis = nil
         resultView.string = ""
         guard !currentSource.isEmpty else { stateLabel.stringValue = "请先在其他应用选中英文，再用力点按。"; return }
         guard currentSource.count <= 20_000 else { stateLabel.stringValue = "原文超过 20,000 个字符，请缩短选区。"; return }
-        let settings: (AIConfiguration, String)
+        let settings: AIConfiguration
         do { settings = try configuration() }
         catch { stateLabel.stringValue = "原文已读取；\(error.localizedDescription)"; return }
+        if !bypassReuse, let previous = lastCompleted,
+           previous.source == currentSource, previous.endpoint == settings.endpoint, previous.model == settings.model {
+            currentAnalysis = previous.result
+            popup.display(previous.result)
+            stateLabel.stringValue = "已复用上次结果，本次未请求 AI。"
+            return
+        }
         let requestGeneration = generation
         let text = currentSource
-        stateLabel.stringValue = "正在翻译并整理表达…可点击取消。"
+        let actionStarted = ProcessInfo.processInfo.systemUptime
+        stateLabel.stringValue = "正在读取密钥…如有系统提示请确认；可点击取消。"
         analysisTask = Task { @MainActor [weak self] in
             guard let self else { return }
             do {
-                let result = try await self.client.analyze(text: text, configuration: settings.0, key: settings.1)
+                guard let key = try await KeyStore.readAsync(), !key.isEmpty else {
+                    throw AppError.message("请先在 AI 设置中保存密钥。")
+                }
+                guard self.generation == requestGeneration, !Task.isCancelled else { return }
+                self.stateLabel.stringValue = "正在翻译并整理表达…可点击取消。"
+                self.popup.refresh()
+                let requestStarted = ProcessInfo.processInfo.systemUptime
+                let result = try await self.client.analyze(text: text, configuration: settings, key: key)
                 guard self.generation == requestGeneration, !Task.isCancelled else { return }
                 self.currentAnalysis = result
+                self.lastCompleted = (text, settings.endpoint, settings.model, result)
                 self.popup.display(result)
-                self.stateLabel.stringValue = "完成。可收藏到本机。"
+                let now = ProcessInfo.processInfo.systemUptime
+                let totalSeconds = now - actionStarted
+                let aiSeconds = now - requestStarted
+                self.stateLabel.stringValue = "完成，共 \(String(format: "%.1f", totalSeconds)) 秒（AI \(String(format: "%.1f", aiSeconds)) 秒）。"
             } catch {
                 guard self.generation == requestGeneration, !Task.isCancelled else { return }
                 if let network = error as? URLError, network.code == .timedOut {
