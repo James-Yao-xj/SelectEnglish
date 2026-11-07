@@ -176,3 +176,37 @@ Replaced Keychain with user-approved per-user local credential file, preserving 
 ### Next Steps
 
 - Gather user feedback on everyday popup responsiveness; single-sample timing is not a guarantee.
+
+
+## Session 6: Install v0.9, clean old copies and publish release
+<!-- trellis-session: v=2 fp=8ae6e3437b9a6e25 -->
+
+**Date**: 2026-11-07
+**Task**: Install v0.9, clean old copies and publish release
+**Branch**: `main`
+
+### Summary
+
+Installed canonical /Applications/SelectEnglish.app, verified running path and native permissions, moved14 obsolete/duplicate app/package artifacts to recoverable Trash, and published private GitHub v0.9 release.
+
+### Main Changes
+
+- Updated install docs; user runtime credentials/favorites untouched. ZIP contains canonical SelectEnglish.app and SHA256 companion.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `3213826` | docs: record installed v0.9 and GitHub release |
+
+### Testing
+
+- [OK] Verified identical signed executable, strict codesign, current-process AX/input allowed+tap enabled, active-location inventory and GitHub asset digest match. No code rebuild or API request.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Use installed menu-bar app; future updates replace only the application bundle.
