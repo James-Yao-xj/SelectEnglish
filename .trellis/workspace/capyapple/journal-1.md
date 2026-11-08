@@ -279,3 +279,37 @@ Applied warm kraft-paper background with cached subtle grain/fibers, dark-brown 
 ### Next Steps
 
 - Gather user feedback on paper tone and texture strength; no rebuild for docs-only work.
+
+
+## Session 9: Multi-agent full bug audit on dedicated fix branch
+<!-- trellis-session: v=2 fp=ff29d94b694cc449 -->
+
+**Date**: 2026-11-08
+**Task**: Multi-agent full bug audit on dedicated fix branch
+**Branch**: `fix/full-audit-2026-11-08`
+
+### Summary
+
+Created fix/full-audit-2026-11-08; three full-coverage audits confirmed and repaired P1 stale favorite wrong deletion and P2 queued mouse position mismatch, with final independent check.
+
+### Main Changes
+
+- Production UUID menu selection, immediate selection-preserving refresh, recorded NSEvent screen-point helper, regression tests and audit report. No version, installation, main merge or release change.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `110571b` | fix: preserve favorite identity and recorded click position |
+
+### Testing
+
+- [OK] Five offline groups and unsigned full compile passed independently; production NSMenuItem/temp notebook and synthetic non-posted mouse event regressions. No real credentials/userdata/provider/UI or hardware used.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Review dedicated branch before any merge or installed application update.
