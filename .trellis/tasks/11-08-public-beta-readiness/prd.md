@@ -13,4 +13,4 @@ Prepare SelectEnglish for transparent public beta distribution, completing prior
 ## Acceptance
 Document precisely which gates passed and which require account credentials/another real Mac/human sample judgement. Publish source/pre-release artifacts under prior authorization if checks pass, never call an ad-hoc artifact formally notarized or general stable. Do not rewrite favorites or change production selection/AI model policy. Secret scan candidates before publish.
 ## External decisions/dependencies
-Apple Developer account/certificate and MIT license choice requested asynchronously. Formal notarization cannot pass without a usable identity/profile. Physical separate-machine testing cannot be simulated with CI.
+Resolved: user has no Apple Developer account and asked to complete remaining preparation; user explicitly selected MIT. Formal notarization cannot pass without a usable identity/profile. Physical separate-machine testing cannot be simulated with CI.
