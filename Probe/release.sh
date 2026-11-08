@@ -41,7 +41,7 @@ else
     xcrun notarytool submit "$release_stage/notary-upload.zip" --keychain-profile "$NOTARY_PROFILE" \
         --wait --timeout 20m --output-format json > "$release_stage/notary-result.json"
     status="$(plutil -extract status raw -o - "$release_stage/notary-result.json")"
-    if [[ "$status" != Accepted ]]; then echo "Notarization was not Accepted; no release artifact produced." >&2; exit 1; fi
+    if [[ "$status" != Accepted ]]; then echo "Notarization was not Accepted; no new release artifact produced." >&2; exit 1; fi
     xcrun stapler staple "$release_app"
     xcrun stapler validate "$release_app"
     spctl --assess --type execute --verbose=2 "$release_app"

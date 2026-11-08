@@ -14,6 +14,8 @@ bash Probe/release.sh --beta
 
 测试包输出 `.build/releases/SelectEnglish-v0.10.0-beta.1.zip` 和 `.zip.sha256`。打包资源含 LICENSE 与 PRIVACY.md，不包含 Application Support、偏好设置、密钥或收藏。上传前核对 ZIP 内只有预期应用内容、架构和签名，并检查待发布文件没有凭据。
 
+只有本次发布命令成功退出后，才能发布其产物。失败时可能仍保留此前同版本的 ZIP 和校验文件；文件存在不代表本次构建或公证通过，不应将旧文件作为本次验收证据。
+
 ## 正式签名与公证
 
 维护者需先自行开通 Apple Developer 账号，在钥匙串安装有效的 **Developer ID Application** 签名证书及对应私钥，并通过 `notarytool store-credentials` 交互方式保存可用凭据配置。不要把账号密码、证书私钥或 App Store Connect API 私钥提交到仓库或聊天。账号开通、付费或协议接受由账号所有者操作。
