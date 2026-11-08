@@ -89,7 +89,7 @@ System Settings may show an enabled entry while the current ad hoc build reports
 7. **Wrong vs correct:** never log, prefill, embed or commit credential values. Store only in the per-user runtime directory, ignore accidental `Private/`/`api-key` copies, and scan source/history before push. Explicitly disclose local plaintext storage rather than calling it Keychain encryption.
 
 ## Installed delivery
-The canonical installed app is `/Applications/SelectEnglish.app`. Copy the verified signed app without rebuilding, resigning or changing its bundleID. Verify the process executable path and current-process AX/input-listen permissions before moving source/duplicate app copies to recoverable Trash. Keep user Application Support data separate and untouched. Publish zip with root `SelectEnglish.app` and SHA256 companion; verify remote digest, repository privacy and release assets. Old verified-v0.x/candidate paths are historical evidence, not copies to retain indefinitely.
+The canonical installed app is `/Applications/SelectEnglish.app`. Copy the verified signed app without rebuilding, resigning or changing its bundleID. Verify the process executable path and current-process AX/input-listen permissions before moving source/duplicate app copies to recoverable Trash. Keep user Application Support data separate and untouched. Publish zip with root `SelectEnglish.app` and SHA256 companion; verify remote digest, intended repository visibility and release assets. Old verified-v0.x/candidate paths are historical evidence, not copies to retain indefinitely.
 
 ## Review regression contracts
 1. **Scope / trigger:** prevent unrelated single-word vocabulary and stale AX callbacks after click-away; keep current offline/transmission documentation accurate.

@@ -35,7 +35,7 @@ open .build/probe/SelectEnglishProbe.app
 
 阅读 `AGENTS.md` 与 `.trellis/workflow.md`；已完成任务及验证记录位于 `.trellis/tasks/archive/`。
 
-GitHub 私有仓库：https://github.com/James-Yao-xj/SelectEnglish 。源码已推送至 main。
+GitHub 公开仓库：https://github.com/James-Yao-xj/SelectEnglish 。源码已推送至 main。
 
 ## v0.6 词典式浮层
 结果使用约 420 宽、不超过 520 高的原生非激活浮层：简短原文预览、中文翻译和表达在内部滚动，小型重试/收藏/取消/设置/关闭控件。位置取自真正重按时的指针，限制在对应屏幕可用区域；网络返回时围绕同一锚点更新，不居中弹出普通应用窗口。
