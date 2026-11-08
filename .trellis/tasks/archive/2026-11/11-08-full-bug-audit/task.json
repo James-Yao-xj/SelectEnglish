@@ -3,7 +3,7 @@
   "name": "full-bug-audit",
   "title": "Full application bug audit and fixes",
   "description": "User requested dedicated bug-fix branch and multiple agents to inspect entire application, confirm actionable bugs, and repair with regressions",
-  "status": "in_progress",
+  "status": "completed",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -11,7 +11,7 @@
   "creator": "capyapple",
   "assignee": "capyapple",
   "createdAt": "2026-11-08",
-  "completedAt": null,
+  "completedAt": "2026-11-08",
   "branch": "fix/full-audit-2026-11-08",
   "base_branch": "main",
   "worktree_path": null,
@@ -21,6 +21,6 @@
   "children": [],
   "parent": null,
   "relatedFiles": [],
-  "notes": "Full multiagent audit complete: three independent slices plus final independent check. Fixed confirmed P1 stale favorite picker wrong deletion with production UUID menu binding/refresh and P2 current-pointer click mismatch with recorded event screen point. Added real production-helper regressions, all five offline groups and unsigned full compile pass. Version/installed app/main unchanged. Await branch push and bookkeeping.",
+  "notes": "Full multiagent audit complete: three independent slices plus final independent check. Fixed confirmed P1 stale favorite picker wrong deletion with production UUID menu binding/refresh and P2 current-pointer click mismatch with recorded event screen point. Added real production-helper regressions, all five offline groups and unsigned full compile pass. Version/installed app/main unchanged. Fix commit110571b pushed to origin/fix/full-audit-2026-11-08; main and installed version remain unchanged.",
   "meta": {}
 }
