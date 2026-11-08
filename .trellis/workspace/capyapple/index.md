@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 10
+- **Total Sessions**: 11
 - **Last Active**: 2026-11-08
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~349 | Active |
+| `journal-1.md` | ~384 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 11 | 2026-11-08 | CET-6 vocabulary selection and v0.9.3 delivery | `0f9da7b` | `main` |
 | 10 | 2026-11-08 | Merge audited fixes and make repository public | `2575b52` | `main` |
 | 9 | 2026-11-08 | Multi-agent full bug audit on dedicated fix branch | `110571b` | `fix/full-audit-2026-11-08` |
 | 8 | 2026-11-07 | Kraft-paper popup visual refresh0.9.2 | `c202a3a` | `main` |

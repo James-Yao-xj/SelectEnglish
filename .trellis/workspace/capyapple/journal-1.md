@@ -347,3 +347,38 @@ User explicitly requested merge into main then public repository. Merged dedicat
 ### Next Steps
 
 - Repository is publicly accessible; installed0.9.2 remains unchanged until a separate application update.
+
+
+## Session 11: CET-6 vocabulary selection and v0.9.3 delivery
+<!-- trellis-session: v=2 fp=78f39f121f4b8e59 -->
+
+**Date**: 2026-11-08
+**Task**: CET-6 vocabulary selection and v0.9.3 delivery
+**Branch**: `main`
+
+### Summary
+
+Target CET-6 readers with approximate contextual vocabulary selection; installed and published 0.9.3.
+
+### Main Changes
+
+- Preserve single-word lookup, learning order, existing favorites, runtime credentials and paper popup.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `0f9da7b` | feat: target CET-6 readers in vocabulary selection |
+
+### Testing
+
+- [OK] Independent review, offline regressions, complete signed build, signature check, zero source credential matches, matching remote ZIP digest.
+- [OK] Native process: Accessibility authorized; Input Monitoring allowed; global listener active. No live AI quality sample in this task.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Evaluate vocabulary choices during ordinary use; exact official list matching requires a future lexicon-backed policy.
