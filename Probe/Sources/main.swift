@@ -359,35 +359,42 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc private func saveFavorite() {
         defer { popup.refresh() }
         guard let result = currentAnalysis else { stateLabel.stringValue = "分析完成后才能收藏。"; return }
-        do { try notebook.save(source: currentSource, analysis: result); stateLabel.stringValue = "已收藏到本机。" }
+        do {
+            try notebook.save(source: currentSource, analysis: result)
+            refreshNotebook()
+            stateLabel.stringValue = "已收藏到本机。"
+        }
         catch { stateLabel.stringValue = error.localizedDescription }
     }
 
     private func refreshNotebook() {
+        let selectedID = notebookPicker.selectedItem?.representedObject as? UUID
         notebookPicker.removeAllItems()
         let formatter = DateFormatter()
         formatter.dateStyle = .short
         formatter.timeStyle = .short
         for entry in notebook.entries {
-            let item = NSMenuItem(title: "\(formatter.string(from: entry.createdAt)) · \(entry.source.prefix(55).replacingOccurrences(of: "\n", with: " "))", action: nil, keyEquivalent: "")
+            let item = NotebookMenuSelection.item(for: entry, title: "\(formatter.string(from: entry.createdAt)) · \(entry.source.prefix(55).replacingOccurrences(of: "\n", with: " "))")
             notebookPicker.menu!.addItem(item)
         }
-        if !notebook.entries.isEmpty { notebookPicker.selectItem(at: 0) }
+        if let selectedID, let item = notebookPicker.itemArray.first(where: { $0.representedObject as? UUID == selectedID }) {
+            notebookPicker.select(item)
+        } else if !notebook.entries.isEmpty { notebookPicker.selectItem(at: 0) }
         notebookState.stringValue = notebook.loadError ?? "共 \(notebook.entries.count) 条，仅保存在本机。"
         selectFavorite()
     }
 
     @objc private func selectFavorite() {
-        let index = notebookPicker.indexOfSelectedItem
-        guard notebook.entries.indices.contains(index) else { notebookView.string = "尚无收藏。"; return }
-        let entry = notebook.entries[index]
+        guard let entry = NotebookMenuSelection.entry(for: notebookPicker.selectedItem, in: notebook.entries) else {
+            notebookView.string = "尚无收藏。"
+            return
+        }
         notebookView.string = "原文\n\(entry.source)\n\n\(entry.analysis.displayText)"
     }
 
     @objc private func deleteFavorite() {
-        let index = notebookPicker.indexOfSelectedItem
-        guard notebook.entries.indices.contains(index) else { return }
-        do { try notebook.delete(id: notebook.entries[index].id); refreshNotebook() }
+        guard let entry = NotebookMenuSelection.entry(for: notebookPicker.selectedItem, in: notebook.entries) else { return }
+        do { try notebook.delete(id: entry.id); refreshNotebook() }
         catch { notebookState.stringValue = error.localizedDescription }
     }
 

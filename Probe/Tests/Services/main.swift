@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 
 /// Intercept every test request so no network connection is made.
 // The lock protects callback cancellation; the test runner changes handlers serially.
@@ -272,6 +273,23 @@ func check(_ condition: @autoclosure () -> Bool, _ message: String) throws {
         try check(reopened.entries.count == 1 && reopened.entries[0].analysis == analysis, "notebook survives reopen")
         try reopened.delete(id: reopened.entries[0].id)
         try check(NotebookStore(file: file).entries.isEmpty, "delete persists")
+        let identityFile = directory.appendingPathComponent("identity-notebook.json")
+        let identityStore = NotebookStore(file: identityFile)
+        try identityStore.save(source: "A", analysis: analysis)
+        let originalA = identityStore.entries[0]
+        let selectedAItem = NotebookMenuSelection.item(for: originalA, title: "Identical display title")
+        try check(selectedAItem.representedObject as? UUID == originalA.id, "production menu item binds saved record UUID")
+        try identityStore.save(source: "C", analysis: analysis)
+        let insertedC = identityStore.entries[0]
+        let insertedCItem = NotebookMenuSelection.item(for: insertedC, title: "Identical display title")
+        try check(insertedCItem.representedObject as? UUID != selectedAItem.representedObject as? UUID, "identical titles retain distinct identities")
+        let resolvedA = NotebookMenuSelection.entry(for: selectedAItem, in: identityStore.entries)
+        try check(resolvedA?.source == "A" && resolvedA?.id == originalA.id, "old selected menu item resolves A after C is prepended")
+        try identityStore.delete(id: resolvedA!.id)
+        let identityReopened = NotebookStore(file: identityFile)
+        try check(identityReopened.entries.count == 1 && identityReopened.entries[0].id == insertedC.id && identityReopened.entries[0].source == "C", "delete selected A preserves new C after reopen")
+        try check(NotebookMenuSelection.entry(for: selectedAItem, in: identityReopened.entries) == nil, "removed menu identity cannot resolve to another record")
+        print("PASS: production notebook menu identity prevents stale-selection wrong deletion")
         let corrupt = Data("broken file".utf8)
         try corrupt.write(to: file)
         let damaged = NotebookStore(file: file)

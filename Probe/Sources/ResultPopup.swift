@@ -177,7 +177,7 @@ final class ResultPopup: NSObject {
     /// Both event monitors use the same decision, including when AX is pending but hidden.
     private func handleMouseDown(_ event: NSEvent) {
         if dismissalState.shouldDismissMouseDown(timestamp: event.timestamp, popupVisible: panel.isVisible,
-            pointInsidePopup: panel.frame.contains(NSEvent.mouseLocation)) { dismiss() }
+            pointInsidePopup: panel.frame.contains(PopupMouseEvent.screenPoint(for: event))) { dismiss() }
     }
 
     private func configure(_ view: NSTextView, in scroll: NSScrollView) {
