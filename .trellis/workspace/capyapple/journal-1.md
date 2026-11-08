@@ -382,3 +382,40 @@ Target CET-6 readers with approximate contextual vocabulary selection; installed
 ### Next Steps
 
 - Evaluate vocabulary choices during ordinary use; exact official list matching requires a future lexicon-backed policy.
+
+
+## Session 12: Prepare public beta distribution and onboarding
+<!-- trellis-session: v=2 fp=be7d23a6bdf813a2 -->
+
+**Date**: 2026-11-08
+**Task**: Prepare public beta distribution and onboarding
+**Branch**: `main`
+
+### Summary
+
+Published verified universal0.10.0-beta.1, native first-use guidance, MIT/privacy/install/security docs, dual-host CI and bounded real CET6 sample evidence.
+
+### Main Changes
+
+- Formal Developer ID+notarytool path fails closed; explicit ad-hoc beta path and public prerelease with matching remote checksum.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `5a37379` | feat: prepare universal public beta distribution and onboarding |
+| `184d20c` | docs: record beta validation and failed-release artifact handling |
+| `4434e8a` | docs: record passing dual-architecture CI and external release gates |
+
+### Testing
+
+- [OK] Six offline groups and independent review passed; arm64/x86_64 macOS15 GitHub hosts both passed Universal13 build checks in run42450081428.
+- [OK] Isolated native first-launch help visually checked. Four public real AI samples recorded. No actual runtime key read. Working installed0.9.3 unchanged; QA copy in Trash.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- User has no Apple Developer account; formal identity/notarization and clean other-Mac/min13/Intel Force Touch QA remain external prerequisites before general stable distribution.
