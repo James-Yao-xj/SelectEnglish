@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 9
+- **Total Sessions**: 10
 - **Last Active**: 2026-11-08
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~315 | Active |
+| `journal-1.md` | ~349 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 10 | 2026-11-08 | Merge audited fixes and make repository public | `2575b52` | `main` |
 | 9 | 2026-11-08 | Multi-agent full bug audit on dedicated fix branch | `110571b` | `fix/full-audit-2026-11-08` |
 | 8 | 2026-11-07 | Kraft-paper popup visual refresh0.9.2 | `c202a3a` | `main` |
 | 7 | 2026-11-07 | Fix full-review findings and install patch0.9.1 | `b603c44`, `e4f7b34` | `main` |

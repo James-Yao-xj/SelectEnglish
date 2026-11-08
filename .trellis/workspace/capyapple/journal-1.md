@@ -313,3 +313,37 @@ Created fix/full-audit-2026-11-08; three full-coverage audits confirmed and repa
 ### Next Steps
 
 - Review dedicated branch before any merge or installed application update.
+
+
+## Session 10: Merge audited fixes and make repository public
+<!-- trellis-session: v=2 fp=7179b0c0120a532b -->
+
+**Date**: 2026-11-08
+**Task**: Merge audited fixes and make repository public
+**Branch**: `main`
+
+### Summary
+
+User explicitly requested merge into main then public repository. Merged dedicated audit branch, pushed main, changed visibility and verified GitHub PUBLIC/default main.
+
+### Main Changes
+
+- Preserved merge history and fix branch; updated current README and visibility guidance. Installed application and all user runtime data remain unchanged.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2575b52` | Merge full bug audit fixes into main |
+
+### Testing
+
+- [OK] Scanned all279 historical blobs for common credentials/private keys and tracked runtime key/notebook/environment files: zero matches. Verified pushed main merge SHA and public visibility. Source changes are the previously tested audit fixes; no rebuild/re-sign or API calls.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Repository is publicly accessible; installed0.9.2 remains unchanged until a separate application update.
