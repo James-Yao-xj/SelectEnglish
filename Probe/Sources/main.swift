@@ -13,6 +13,8 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var settingsWindow: NSWindow!
     private var notebookWindow: NSWindow!
     private var diagnosticsWindow: NSWindow!
+    private var onboardingWindow: NSWindow!
+    private let onboardingState = NSTextField(wrappingLabelWithString: "")
     private var sourceView: NSTextView { popup.sourceView }
     private var resultView: NSTextView { popup.resultView }
     private var stateLabel: NSTextField { popup.stateLabel }
@@ -43,14 +45,23 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         makeSettingsWindow()
         makeNotebookWindow()
         makeDiagnosticsWindow()
+        makeOnboardingWindow()
         monitor.onTrigger = { [weak self] app, point in self?.capture(app: app, automaticallyAnalyze: true, anchor: point) }
         monitor.onStatusChange = { [weak self] in self?.refreshDiagnostics() }
         monitor.start()
         diagnosticTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            guard let self, self.diagnosticsWindow.isVisible else { return }
+            guard let self, self.diagnosticsWindow.isVisible || self.onboardingWindow.isVisible else { return }
             self.refreshDiagnostics()
         }
         if let error = notebook.loadError { notebookState.stringValue = error }
+        let defaults = UserDefaults.standard
+        let showHelp = OnboardingPolicy.shouldShowAutomatically(
+            hasSeenHelp: defaults.bool(forKey: OnboardingPolicy.seenKey),
+            endpoint: defaults.string(forKey: "ai.endpoint"), model: defaults.string(forKey: "ai.model"),
+            keyOrigin: defaults.string(forKey: "ai.keyOrigin"))
+        // Record this launch even on existing installations so later configuration removal is quiet.
+        defaults.set(true, forKey: OnboardingPolicy.seenKey)
+        if showHelp { showOnboarding() }
     }
 
     private func makeMenu() {
@@ -64,7 +75,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         showItem.target = self
         appMenu.insertItem(showItem, at: 0)
         for (index, entry) in [("AI 设置…", #selector(showSettings)), ("我的收藏…", #selector(showNotebook)),
-                               ("触发与选区状态…", #selector(showDiagnostics))].enumerated() {
+                               ("触发与选区状态…", #selector(showDiagnostics)), ("使用帮助与隐私…", #selector(showOnboarding))].enumerated() {
             let item = NSMenuItem(title: entry.0, action: entry.1, keyEquivalent: index == 0 ? "," : "")
             item.target = self
             appMenu.insertItem(item, at: index + 1)
@@ -84,7 +95,8 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         statusItem.button?.toolTip = "SelectEnglish"
         let menu = NSMenu()
         for (title, action) in [("显示翻译", #selector(showResult)), ("AI 设置…", #selector(showSettings)),
-                                ("我的收藏…", #selector(showNotebook)), ("触发与选区状态…", #selector(showDiagnostics))] {
+                                ("我的收藏…", #selector(showNotebook)), ("触发与选区状态…", #selector(showDiagnostics)),
+                                ("使用帮助与隐私…", #selector(showOnboarding))] {
             let item = menu.addItem(withTitle: title, action: action, keyEquivalent: "")
             item.target = self
         }
@@ -198,6 +210,54 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         stack.addArrangedSubview(buttons([("刷新应用", #selector(refreshTargets)), ("读取指定应用选区", #selector(readTarget))]))
         finishLayout(stack)
     }
+
+    /// Build offline setup guidance. Only explicit buttons request system permissions.
+    private func makeOnboardingWindow() {
+        let (window, stack) = window(title: "SelectEnglish · 使用帮助与隐私", width: 760, height: 680)
+        onboardingWindow = window
+        window.minSize = NSSize(width: 700, height: 620)
+        let title = NSTextField(labelWithString: "从选中的英文开始")
+        title.font = .systemFont(ofSize: 22, weight: .semibold)
+        stack.addArrangedSubview(title)
+        let help = NSTextView()
+        let helpScroll = scroll(help, height: 340)
+        help.string = """
+        1. 先了解会发送什么
+        配置 AI 后，在其他应用选中英文并用力点按触控板，选中文字就会发送到你填写的 HTTPS AI 接口；“重试”也会发送。未配置时只显示原文。请勿选择密码、个人隐私或不宜交给该服务的内容。
+
+        2. 配置你自己的 AI 服务
+        在“AI 设置”填写完整接口地址、模型和密钥。服务可能收费；数据保留和使用方式由该服务的政策决定。应用不会替你创建服务账户。
+
+        3. 按需授权，再测试选区
+        “辅助功能”用于读取目标应用的选中文字；“输入监听”用于观察鼠标和触控板手势，不监听键盘。点击下面的授权按钮，按系统提示在“隐私与安全性”中允许，然后重新启动监听。权限已允许也不代表当前监听已创建或正在启用，请核对下方状态。
+        需要支持用力点按的触控板。可先在 TextEdit 或浏览器中选中一小段英文测试；“触发与选区状态”可手动读取指定应用，手动读取不会自动发送 AI。
+
+        本机保存与隐私
+        密钥以明文保存在 ~/Library/Application Support/SelectEnglish/Private/api-key，仅当前用户可读写；这不是加密保险箱。可在“AI 设置”删除密钥。只有点击“收藏”才会把原文和分析保存到本机收藏夹；可在“我的收藏”删除。应用不会把收藏自动上传到自己的服务器。
+
+        系统词典也弹出来？
+        系统“查询与数据检测器”可能同时响应同一次用力点按。本应用不会拦截系统操作；如有冲突，可到“系统设置 → 触控板 → 光标与点按”调整或关闭该项，具体名称随系统版本而异。
+
+        测试版说明
+        当前仍需更多真实 Mac 验证；应用不支持辅助功能选区时可能读不到文字。AI 解释可能有误，词汇难度为近似判断。关闭此窗口后，仍可从菜单栏“译 → 使用帮助与隐私”重新打开。
+        """
+        stack.addArrangedSubview(helpScroll)
+        onboardingState.font = .systemFont(ofSize: 12)
+        stack.addArrangedSubview(onboardingState)
+        stack.addArrangedSubview(buttons([("授权辅助功能", #selector(authorize)), ("授权输入监听", #selector(authorizeInput)),
+                                         ("重新启动监听", #selector(restartMonitor))]))
+        stack.addArrangedSubview(buttons([("AI 设置…", #selector(showSettings)), ("触发与选区状态…", #selector(showDiagnostics)),
+                                         ("开始使用", #selector(closeOnboarding))]))
+        finishLayout(stack)
+    }
+
+    @objc private func showOnboarding() {
+        UserDefaults.standard.set(true, forKey: OnboardingPolicy.seenKey)
+        refreshDiagnostics()
+        show(onboardingWindow)
+    }
+
+    @objc private func closeOnboarding() { onboardingWindow.performClose(nil) }
 
     @objc private func showResult() { popup.show(at: popupAnchor ?? NSEvent.mouseLocation) }
     @objc private func showSettings() {
@@ -399,6 +459,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func refreshDiagnostics() {
+        onboardingState.stringValue = "当前进程状态 · 辅助功能：\(AXIsProcessTrusted() ? "已授权" : "未授权")；输入监听访问：\(monitor.hasListenAccess ? "已允许" : "未允许")\n监听创建：\(monitor.isCreated ? "成功" : "未创建")；监听启用：\(monitor.isEnabled ? "是" : "否")。授权后可点击“重新启动监听”再核对。"
         diagnosticsState.stringValue = "辅助功能：\(AXIsProcessTrusted() ? "已授权" : "未授权")\n当前进程输入监听访问：\(monitor.hasListenAccess ? "已允许" : "未允许")；监听创建：\(monitor.isCreated ? "成功" : "未创建")；启用：\(monitor.isEnabled ? "是" : "否")\n第 \(monitor.startCount) 次启动（计数已重置） · 原始手势：\(monitor.rawGestures)  压力：\(monitor.pressureEvents)  stage 2：\(monitor.stage2Events)  触发：\(monitor.triggers)\n停用次数：超时 \(monitor.timeoutDisables) / 系统或用户 \(monitor.userInputDisables)\n最近停用：\(monitor.lastDisabledReason)\n最近选区：\(lastCapture)"
     }
     @objc private func authorize() {

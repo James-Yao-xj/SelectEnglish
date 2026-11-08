@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "policy": "Approximate CET-6-reader relevance; not official word-list membership.",
+  "cases": [
+    {
+      "id": "empty",
+      "source": "",
+      "focus": "empty-input",
+      "expectedBehavior": "本机拒绝空选区，不发送 AI 请求。",
+      "candidateVocabulary": []
+    },
+    {
+      "id": "basic",
+      "source": "I like to read books after school.",
+      "focus": "basic-sentence",
+      "expectedBehavior": "生词应为空或极克制，不列 like/read/books/school 普通义。",
+      "candidateVocabulary": []
+    },
+    {
+      "id": "single-common",
+      "source": "happy",
+      "focus": "single-word-exception",
+      "expectedBehavior": "必须包含 happy 的词性与中文义；缺少语境时不编造。",
+      "candidateVocabulary": [
+        "happy"
+      ]
+    },
+    {
+      "id": "single-inflected",
+      "source": "scrutinized",
+      "focus": "original-form",
+      "expectedBehavior": "解释 scrutinized，保留原词形；不只返回 scrutinize。",
+      "candidateVocabulary": [
+        "scrutinized"
+      ]
+    },
+    {
+      "id": "academic",
+      "source": "The scientist meticulously scrutinized the anomalous results before drawing a tentative conclusion.",
+      "focus": "academic-reading",
+      "expectedBehavior": "优先有价值的修饰词、学术动作与异常/暂定语义，略过普通基础词。",
+      "candidateVocabulary": [
+        "meticulously",
+        "scrutinized",
+        "anomalous",
+        "tentative"
+      ]
+    },
+    {
+      "id": "familiar-sense",
+      "source": "The committee tabled the proposal until next month.",
+      "focus": "contextual-sense",
+      "expectedBehavior": "考虑 tabled 的延期审议语境义；如指出地区义差异应简短，不误译为桌子。",
+      "candidateVocabulary": [
+        "tabled"
+      ]
+    },
+    {
+      "id": "fixed",
+      "source": "Despite the setback, she persevered and eventually turned the tide in her favor.",
+      "focus": "fixed-expression",
+      "expectedBehavior": "优先 setback/persevered 等，turn the tide 作为固定表达；不把任意相邻词组凑成表达。",
+      "candidateVocabulary": [
+        "setback",
+        "persevered"
+      ]
+    },
+    {
+      "id": "technical",
+      "source": "The catalyst accelerated the reaction without being consumed.",
+      "focus": "technical-term",
+      "expectedBehavior": "催化剂、反应与未被消耗的科学含义准确；不根据普通字面义误译 consumed。",
+      "candidateVocabulary": [
+        "catalyst",
+        "accelerated",
+        "consumed"
+      ]
+    },
+    {
+      "id": "negation",
+      "source": "The evidence is insufficient to substantiate the allegation.",
+      "focus": "negation-meaning",
+      "expectedBehavior": "保留证据不足、不能证实的意思；优先 substantiate/allegation。",
+      "candidateVocabulary": [
+        "insufficient",
+        "substantiate",
+        "allegation"
+      ]
+    },
+    {
+      "id": "fragment",
+      "source": "a substantial discrepancy between the estimates",
+      "focus": "fragment",
+      "expectedBehavior": "按短语解释，不虚构主语或事件；词性符合原文。",
+      "candidateVocabulary": [
+        "substantial",
+        "discrepancy"
+      ]
+    }
+  ]
+}

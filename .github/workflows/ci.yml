@@ -1,0 +1,28 @@
+name: Offline macOS checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  offline:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, macos-15-intel]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Offline regression suite and universal macOS 13 build
+        run: bash Probe/build.sh --unsigned
+      - name: Verify both slices and deployment floor
+        run: |
+          executable=.build/probe/SelectEnglish.app/Contents/MacOS/SelectEnglishProbe
+          xcrun lipo "$executable" -verify_arch arm64 x86_64
+          plutil -lint .build/probe/SelectEnglish.app/Contents/Info.plist
+          for arch in arm64 x86_64; do
+            xcrun vtool -arch "$arch" -show-build "$executable" | awk '$1 == "minos" { found=1; if ($2 != "13.0") exit 1 } END { if (!found) exit 1 }'
+          done

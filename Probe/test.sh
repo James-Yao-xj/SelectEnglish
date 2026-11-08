@@ -16,3 +16,6 @@ swiftc -module-cache-path "$probe_tests/module-cache" Probe/Sources/PopupDismiss
 
 swiftc -module-cache-path "$probe_tests/module-cache" Probe/Sources/PopupMouseEvent.swift Probe/Sources/PopupDismissalState.swift Probe/Tests/MouseEvent/main.swift -framework AppKit -o "$probe_tests/mouse-event-tests"
 "$probe_tests/mouse-event-tests"
+
+swiftc -module-cache-path "$probe_tests/module-cache" Probe/Sources/OnboardingPolicy.swift Probe/Tests/Onboarding/main.swift -o "$probe_tests/onboarding-tests"
+"$probe_tests/onboarding-tests"
