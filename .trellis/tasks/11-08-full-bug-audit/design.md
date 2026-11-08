@@ -1,0 +1,6 @@
+Three independent audit slices: native capture/popup lifecycle; HTTP/schema/provider validation; storage/settings/build/tests. Agents first report findings without editing. Main verifies and routes bounded implementations to prevent shared-file conflicts. Applicable source scope Probe/Sources, Probe/Tests, Probe/Experiments, shell scripts and current README/plist. Generated Trellis tooling is workflow infrastructure, not application code to redesign. Current app installation remains unchanged; final branch is reviewable separately from main.
+
+## Confirmed repair boundary
+- P1 favorite mismatch: after inserting a favorite, rebuild picker and preserve selected record UUID; represent menu selection with UUID and resolve display/delete through identity instead of array position. Regression uses fake persisted records before/after prepend/delete/reopen.
+- P2 click-event mismatch: classify the recorded mouse-down location, not live cursor position when delivered. Use AppKit window-to-screen conversion for window events and native screen location for nil-window events. Regression decouples recorded click/current pointer without actual posted input. Preserve timing cutoff and existing dismissal state.
+- API/schema/provider slice found no new confirmed bug; no speculative changes there. No release/version/install changes in bug-fix branch.
