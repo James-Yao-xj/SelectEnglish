@@ -419,3 +419,33 @@ Published verified universal0.10.0-beta.1, native first-use guidance, MIT/privac
 ### Next Steps
 
 - User has no Apple Developer account; formal identity/notarization and clean other-Mac/min13/Intel Force Touch QA remain external prerequisites before general stable distribution.
+
+
+## Session 13: Rewrite reader-facing README
+<!-- trellis-session: v=2 fp=1abd67ffab8c51ae -->
+
+**Date**: 2026-11-09
+**Task**: Rewrite reader-facing README
+**Branch**: `main`
+
+### Summary
+
+Replaced operational-report style README with Chinese product overview, real features, clearly illustrative learning sample, quickstart and focused docs links.
+
+### Main Changes
+
+- Retained accurate beta/unnotarized, approximate CET6, automatic text transmission, plaintext key and compatibility boundaries.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `3aea968684379b3c26297cb84f2444ff99899d55` | docs: present SelectEnglish through its reading workflow |
+
+### Testing
+
+- [OK] Independent docs review, valid local links and clean whitespace; no runtime changes or rebuild.
+
+### Status
+
+[OK] **Completed**

@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 12
-- **Last Active**: 2026-11-08
+- **Total Sessions**: 13
+- **Last Active**: 2026-11-09
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~421 | Active |
+| `journal-1.md` | ~451 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 13 | 2026-11-09 | Rewrite reader-facing README | `3aea968684379b3c26297cb84f2444ff99899d55` | `main` |
 | 12 | 2026-11-08 | Prepare public beta distribution and onboarding | `5a37379`, `184d20c`, `4434e8a` | `main` |
 | 11 | 2026-11-08 | CET-6 vocabulary selection and v0.9.3 delivery | `0f9da7b` | `main` |
 | 10 | 2026-11-08 | Merge audited fixes and make repository public | `2575b52` | `main` |
