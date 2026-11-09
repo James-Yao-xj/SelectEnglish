@@ -1,38 +1,61 @@
 # SelectEnglish
 
-MacBook 菜单栏英语阅读工具：选中英文 → 触控板用力点按 → 牛皮纸小浮窗展示生词、整句解释、固定表达。支持自定义地址、模型和密钥的 OpenAI 兼容接口，结果可手动收藏。
+**在阅读中理解英文，积累表达。**
 
-**当前为早期公开测试版。** 本轮候选版本为 [v0.10.0-beta.1](https://github.com/James-Yao-xj/SelectEnglish/releases/tag/v0.10.0-beta.1)，以发布页实际状态为准。尚未取得 Developer ID 证书或完成 Apple 公证；不承诺普通用户下载后能直接打开。旧发布版本也不能视为已完成正式分发验收。
+[![macOS checks](https://github.com/James-Yao-xj/SelectEnglish/actions/workflows/ci.yml/badge.svg)](https://github.com/James-Yao-xj/SelectEnglish/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-## 安装和首次使用
+SelectEnglish 是一款面向 MacBook 的英语阅读工具。阅读网页或文档时，选中英文并用力点按触控板，即可在原文附近的小浮窗中查看生词、整句解释和固定表达，把查词与理解句子放在同一个阅读动作里。
 
-测试包为 `SelectEnglish-v0.10.0-beta.1.zip`，包含 Apple 芯片和 Intel 两种架构。构建目标为 macOS 13.0 及以上；最低版本实际运行、其他 Mac 的全新安装及 Intel 触控板取词仍待验证，详见[验收记录](docs/RELEASE-CHECKLIST.md)。需要支持 Force Touch 的触控板；图片文字、扫描 PDF 不支持。
+[下载测试版](https://github.com/James-Yao-xj/SelectEnglish/releases/tag/v0.10.0-beta.1) · [安装指南](docs/INSTALL.md) · [隐私说明](PRIVACY.md) · [参与贡献](CONTRIBUTING.md)
 
-1. 从上述发布页下载 ZIP 和 SHA256 文件，校验后解压，将 `SelectEnglish.app` 放入“应用程序”。统一从 `/Applications/SelectEnglish.app` 运行，先退出其他副本。
-2. 测试包采用临时签名，可能被 macOS 拦截。遇到拦截时请等待正式签名版本，或具备开发经验时[自行构建](CONTRIBUTING.md)；不要关闭 Gatekeeper 或移除隔离标记。
-3. 启动后菜单栏出现“译”。未配置的新用户会看到首次使用指引，也可从菜单重新打开。按指引在系统设置中授权“辅助功能”和“输入监控”；后者仅用于观察鼠标及触控板，不监听全局键盘。
-4. 打开“AI 设置”，填写完整 HTTPS `/chat/completions` 地址、模型名和 API 密钥。**配置后重按会自动将选中文字发送至该服务**，可能产生该服务的费用；未配置不会发送。
-5. 在 TextEdit 或网页选中愿意发送的一句英文，再用力点按。点击浮层外部、Esc 或关闭按钮可取消并关闭。菜单中可查看设置、收藏和触发状态。
+## 为阅读而设计
 
-更多见[安装与排错](docs/INSTALL.md)。临时签名更新后可能需要重新授权同一个应用。升级只替换应用，保留本机配置和收藏；无需每次重新输入本地密钥。
+- **重按取词**：通过 Force Touch 用力点按触发，结果在指针附近呈现，点击外部或按 Esc 即可关闭。
+- **先词后句**：按“生词 → 整句解释 → 固定表达”的顺序分析，兼顾当前理解与后续积累。
+- **面向六级读者**：优先选择较难词、专业词和熟词生义，略过普通基础词；单独查询一个词时始终解释该词。
+- **原生小浮窗**：使用 AppKit 构建，牛皮纸背景与可滚动内容适合短暂查阅，日常入口收在菜单栏“译”中。
+- **自选 AI 服务**：支持自定义 HTTPS 地址、模型和 API 密钥的 OpenAI 兼容接口。
+- **手动收藏**：需要积累时再保存原文和分析，收藏留在本机，可随时查看与删除。
 
-## 学习内容
+六级难度由 AI 根据语境估计，并未接入官方词表；不保证词表归属。图片文字、扫描 PDF 和未暴露辅助功能选区的控件不支持取词。
 
-生词 → 整句解释 → 固定表达。整句生词筛选面向六级阅读水平：优先六级及以上、专业词和熟词的少见语境义，略过基础高频词，最多 8 个且不凑数；单独选中一个词时始终解释该词。难度由 AI 根据语境估计，未接入官方词表，不能保证官方词表归属。固定表达最多 5 个，没有则明确说明。已有收藏不会重新分析。
+## 一次查询，可以学到什么
 
-接口最长接受 20,000 字符，超时 60 秒；完整结果生成后显示，速度取决于网络、模型和服务负载。官方 DeepSeek 指定模型使用关闭深度思考的请求；其他自定义服务不附加厂商参数。同一次运行可复用最近一次相同原文、接口及模型的成功结果，“重试”始终重新请求。
+以这句话为例，以下内容仅用于说明学习结果的组织方式，实际返回因模型而异：
 
-## 数据和隐私
+> Despite the setback, she persevered and eventually turned the tide in her favor.
 
-没有开发者运营的中转服务器、遥测或自动崩溃上传；应用不读取剪贴板，不做 OCR。自动分析不保存为历史记录，点击“收藏”才保存原文和结果。API 密钥按用户选择以明文保存在本机私有文件，**不是加密保险箱**。
+| 内容 | 示例 |
+|---|---|
+| 生词 | **persevered** · 动词：坚持不懈；**setback** · 名词：挫折 |
+| 整句解释 | 尽管遭遇挫折，她仍坚持不懈，最终扭转了局势，使之对自己有利。 |
+| 固定表达 | **turn the tide**：扭转局势。例：Their persistence helped turn the tide. |
 
-- 密钥：`~/Library/Application Support/SelectEnglish/Private/api-key`（目录 0700、文件 0600）。
-- 收藏：`~/Library/Application Support/SelectEnglish/notebook.json`。
-- 接口、模型等偏好：macOS 用户偏好设置。
+简单句可以没有生词或固定表达，不强行凑数。已有收藏保留原分析，不会随提示词更新而改写。
 
-第三方 AI 的保留和训练政策由该服务决定。详细的数据流、删除及权限说明见[隐私说明](PRIVACY.md)。不要把密钥或私人选区放进 GitHub Issue。
+## 开始使用
 
-## 开发与验证
+1. 从 [v0.10.0-beta.1 发布页](https://github.com/James-Yao-xj/SelectEnglish/releases/tag/v0.10.0-beta.1)下载 ZIP 与校验文件，解压后将 `SelectEnglish.app` 放入“应用程序”。先退出旧副本，统一从 `/Applications/SelectEnglish.app` 启动。
+2. 在菜单栏“译”的使用帮助中，按指引授予“辅助功能”和“输入监控”权限。输入监控只观察鼠标和触控板手势，不监听全局键盘。
+3. 打开“AI 设置”，填写完整 HTTPS `/chat/completions` 接口地址、模型和密钥。
+4. 在 TextEdit 或浏览器中选中一句愿意发送给该服务的英文，用力点按触控板。
+
+**当前为早期公开测试版，采用临时签名，尚未完成 Apple 公证，下载后可能被 macOS 拦截。** 遇到拦截时可等待正式签名版本，或具备开发经验时从源码构建；不要关闭 Gatekeeper 或移除隔离标记。授权、系统词典冲突及排错步骤见[安装指南](docs/INSTALL.md)。
+
+安装包包含 Apple 芯片和 Intel 两种架构，需要支持 Force Touch 的触控板。macOS 13.0 是编译部署下限；最低系统实际运行、Intel 触控板及另一台 Mac 的全新安装仍待验证。具体证据与待办见[发布验收记录](docs/RELEASE-CHECKLIST.md)。
+
+## 隐私与数据
+
+**保存有效配置后，重按会自动把选中文字发送到你指定的 AI 服务，可能产生该服务的费用。** 未配置时不发送。第三方如何保留或使用数据，取决于该服务的政策。
+
+应用没有开发者运营的中转服务器、遥测或自动崩溃上传，不读取剪贴板。分析结果不会自动保存为历史记录，只有点击“收藏”才写入本机。
+
+API 密钥以**明文**保存在本机用户私有文件，通过本机文件权限限制访问，未使用加密存储。密钥与收藏均位于 `~/Library/Application Support/SelectEnglish/`，与项目仓库分离。完整数据流、删除和权限说明见[隐私说明](PRIVACY.md)。
+
+## 开发与贡献
+
+原生 Swift / AppKit 实现，需要 Xcode Command Line Tools。
 
 ```sh
 bash Probe/test.sh
@@ -40,10 +63,11 @@ bash Probe/build.sh
 open .build/probe/SelectEnglish.app
 ```
 
-需要 Xcode Command Line Tools。构建包含双架构编译；离线测试使用假密钥、模拟 HTTP 和临时文件。CI 测试通过不代表真实 Force Click、第三方服务质量或其他机器的 Gatekeeper 安装通过。已有单机 TextEdit/Chrome 重按和真实服务测试来自历史版本，不能替代新版本全量验收。
+离线测试使用模拟 HTTP、假密钥和临时文件；CI 覆盖 Apple 芯片与 Intel 宿主的回归测试及双架构构建。它们不替代实际触控板、第三方 AI 和全新机器安装测试。
 
-- [贡献与构建](CONTRIBUTING.md) · [发布流程](docs/DISTRIBUTION.md)
-- [发布验收与待办](docs/RELEASE-CHECKLIST.md) · [六级筛选评估](docs/evaluation/README.md)
-- [安全反馈](SECURITY.md) · [MIT 许可证](LICENSE)
+- [贡献指南](CONTRIBUTING.md)：开发环境、代码边界与验证方式
+- [发布流程](docs/DISTRIBUTION.md)：打包、签名与公证
+- [六级筛选评估](docs/evaluation/README.md)：公开样例与人工评估规则
+- [安全反馈](SECURITY.md)：如何报告问题并保护凭据与私人文本
 
-项目开发记录遵循 `AGENTS.md` 和 `.trellis/workflow.md`。
+项目采用 [MIT 许可证](LICENSE)。
