@@ -3,3 +3,6 @@ Read focused AXSelectedText first. Add compatible selection attribute/range extr
 
 ## Clipboard revision design direction
 A separate opt-in browser copy fallback integrates on mainactor after failed directAX capture, under existinggeneration and processbinding. Prefer browsernative Copy menu action (boundedpublicAX) over unscopedkeyboardinjection. Back up everypasteboarditem/type; emptyclipboardrequesttransactionchangeCount establishfreshcopy; pollfornewplaintext withinboundedtime; neverreadoldtext. RestoreonlyifpasteboardchangeCount stillours andcancelledsource can'tsendAI. Boundbackupsize/item/types, failbeforeclearing ifformatsunavailable, documentbest-effortconcurrentcopies. UI setting makes behavior explicit, defaultoff; no runtimekey reads bytools.
+
+## Confirmed manual-copy revision
+User confirmed manual Cmd+C/paste works in their actual targetPDF. NativeclosedmenuAXCopy returned nofreshtext on0.10.2. Next sourcebound applicationfeature uses public CGEvent.postToPid(originalbrowserPID) to emit Cmd+C down/up only, with sameprocess/frontmost/generation guards and unconditionalkeyupcleanupfororiginalPID afterkeydown. No systemwide posting, appactivation or keyboardlistener. Clipboardtransaction unchanged andmanualdiagnosticstillAXonly. ActualForceClickselectedtextstillmustverify; no claimthisautomaticallysolvesmouseupselectioncollapse.

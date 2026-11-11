@@ -190,7 +190,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         browserCopyToggle.target = self
         browserCopyToggle.action = #selector(setBrowserCopyOption)
         stack.addArrangedSubview(browserCopyToggle)
-        stack.addArrangedSubview(NSTextField(wrappingLabelWithString: "仅在浏览器重按取词失败时临时复制并恢复剪贴板。剪贴板管理器可能记录该文本；并发复制时优先保留你的新内容。手动诊断不会复制。"))
+        stack.addArrangedSubview(NSTextField(wrappingLabelWithString: "仅在浏览器重按取词失败时向原浏览器发送 ⌘C，临时复制并恢复剪贴板；不监听全局键盘。剪贴板管理器可能记录文本，并发复制时优先保留新内容。手动诊断不会复制。"))
         stack.addArrangedSubview(settingsState)
         stack.addArrangedSubview(buttons([("保存设置", #selector(saveSettings)), ("删除已保存密钥", #selector(deleteKey))]))
         finishLayout(stack)

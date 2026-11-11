@@ -1,5 +1,4 @@
 import AppKit
-import ApplicationServices
 
 /// Bind every fallback action to the original supported browser process.
 struct BrowserCopySource: Sendable {
@@ -16,7 +15,7 @@ struct BrowserCopySource: Sendable {
     }
 }
 
-/// Share cancellation with the serial AX worker without reading controller state off-main.
+/// Share cancellation with the serial copy worker without reading controller state off-main.
 final class BrowserCopyPermit: @unchecked Sendable {
     private let lock = NSLock()
     private var cancelled = false
@@ -24,65 +23,57 @@ final class BrowserCopyPermit: @unchecked Sendable {
     var isValid: Bool { lock.lock(); defer { lock.unlock() }; return !cancelled }
 }
 
-protocol BrowserCopyMenuAccess {
-    associatedtype Node: Hashable
-    func children(_ node: Node, limit: Int) -> [Node]
-    func identifier(_ node: Node) -> String?
-    func command(_ node: Node) -> String?
-    func modifiers(_ node: Node) -> Int?
-    func enabled(_ node: Node) -> Bool
-    func press(_ node: Node) throws
+/// Describe the only key events that this opt-in feature may create.
+struct BrowserCopyKeyIntent: Equatable {
+    let keyCode: CGKeyCode
+    let keyDown: Bool
+    let command: Bool
 }
 
-/// Find the native Copy action without relying on a localized menu title or injecting keys.
-struct BrowserCopyMenuSearch<Access: BrowserCopyMenuAccess> {
-    let access: Access
+protocol BrowserCopyEventPoster {
+    associatedtype Event
+    func make(_ intent: BrowserCopyKeyIntent) -> Event?
+    func post(_ event: Event, to pid: pid_t)
+}
+
+/// Send one Command-C pair to a fixed process, with mandatory key-up cleanup.
+struct BrowserCopyShortcut<Poster: BrowserCopyEventPoster> {
+    let poster: Poster
     let isCurrent: () -> Bool
-    let now: () -> TimeInterval
-    func find(in root: Access.Node) throws -> Access.Node {
-        let deadline = now() + 1
-        var calls = 0
-        func call<T>(_ operation: () -> T) throws -> T {
-            guard isCurrent() else { throw CancellationError() }
-            guard calls < 256, now() < deadline else { throw AppError.message("浏览器复制菜单查找超时。") }
-            calls += 1
-            return operation()
+    func perform(to pid: pid_t) throws {
+        guard isCurrent() else { throw CancellationError() }
+        guard let down = poster.make(BrowserCopyKeyIntent(keyCode: 8, keyDown: true, command: true)),
+              let up = poster.make(BrowserCopyKeyIntent(keyCode: 8, keyDown: false, command: true)) else {
+            throw AppError.message("无法创建浏览器复制快捷键事件。")
         }
-        var queue: [(Access.Node, Int)] = [(root, 0)]
-        var seen = Set<Access.Node>()
-        var index = 0
-        while index < queue.count, seen.count < 128 {
-            let (node, depth) = queue[index]; index += 1
-            guard seen.insert(node).inserted else { continue }
-            let identifier = try call { access.identifier(node) }
-            // Zero modifiers mean Command alone in the AX menu API.
-            let copyShortcut = identifier == "copy:" ? true : try call { access.command(node)?.lowercased() == "c" }
-                && call { access.modifiers(node) == 0 }
-            if copyShortcut, try call({ access.enabled(node) }) { return node }
-            if depth < 3 && queue.count < 128 {
-                let children = try call { access.children(node, limit: 128 - queue.count) }
-                queue.append(contentsOf: children.map { ($0, depth + 1) })
-            }
-        }
-        throw AppError.message("浏览器未提供可用的原生复制命令。请先选中文字。")
-    }
-    func invoke(_ node: Access.Node) throws {
-        guard isCurrent(), access.enabled(node), isCurrent() else { throw CancellationError() }
-        try access.press(node)
+        guard isCurrent() else { throw CancellationError() }
+        poster.post(down, to: pid)
+        // No cancellation branch may skip release of the original process after key-down.
+        poster.post(up, to: pid)
+        // The caller observes clipboard changeCount before it performs cancellation cleanup.
     }
 }
 
-/// Prepare a bounded browser-specific Copy action before the clipboard transaction starts.
-// Immutable prepared handle; all native AX access stays on the shared serial queue.
+private struct NativeBrowserCopyEventPoster: BrowserCopyEventPoster {
+    func make(_ intent: BrowserCopyKeyIntent) -> CGEvent? {
+        guard let event = CGEvent(keyboardEventSource: nil, virtualKey: intent.keyCode, keyDown: intent.keyDown) else { return nil }
+        event.flags = intent.command ? .maskCommand : []
+        return event
+    }
+    func post(_ event: CGEvent, to pid: pid_t) {
+        // Never use a system-wide event tap or activate a different application.
+        event.postToPid(pid)
+    }
+}
+
+/// Prepare an original-browser-only shortcut before the clipboard transaction starts.
+// Immutable handle; posting stays on one shared serial queue.
 final class BrowserCopyFallback: @unchecked Sendable {
     private static let queue = DispatchQueue(label: "com.selectenglish.browser-copy")
     private let source: BrowserCopySource
     private let permit: BrowserCopyPermit
-    private let access: NativeCopyMenuAccess
-    private let item: NativeCopyMenuAccess.Node
-    private init(source: BrowserCopySource, permit: BrowserCopyPermit, access: NativeCopyMenuAccess, item: NativeCopyMenuAccess.Node) {
-        self.source = source; self.permit = permit; self.access = access; self.item = item
-    }
+    private init(source: BrowserCopySource, permit: BrowserCopyPermit) { self.source = source; self.permit = permit }
+
     @MainActor static func prepare(source: BrowserCopySource, permit: BrowserCopyPermit) async throws -> BrowserCopyFallback {
         let releaseDeadline = ProcessInfo.processInfo.systemUptime + 0.6
         while NSEvent.pressedMouseButtons & 1 != 0 {
@@ -91,74 +82,23 @@ final class BrowserCopyFallback: @unchecked Sendable {
             try await Task.sleep(nanoseconds: 20_000_000)
         }
         try Task.checkCancellation()
-        return try await withCheckedThrowingContinuation { continuation in
-            queue.async {
-                do {
-                    let access = NativeCopyMenuAccess(source: source, permit: permit)
-                    guard let root = access.menuBar() else { throw AppError.message("无法读取浏览器的原生菜单。") }
-                    let search = BrowserCopyMenuSearch(access: access, isCurrent: { permit.isValid && source.isCurrent }, now: { ProcessInfo.processInfo.systemUptime })
-                    let item = try search.find(in: root)
-                    continuation.resume(returning: BrowserCopyFallback(source: source, permit: permit, access: access, item: item))
-                } catch { continuation.resume(throwing: error) }
-            }
-        }
+        guard permit.isValid, source.isCurrent else { throw CancellationError() }
+        return BrowserCopyFallback(source: source, permit: permit)
     }
+
     func performCopy() async throws {
         try Task.checkCancellation()
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             Self.queue.async {
                 do {
-                    let search = BrowserCopyMenuSearch(access: self.access, isCurrent: { self.permit.isValid && self.source.isCurrent }, now: { ProcessInfo.processInfo.systemUptime })
-                    try search.invoke(self.item)
+                    let shortcut = BrowserCopyShortcut(poster: NativeBrowserCopyEventPoster(), isCurrent: {
+                        self.permit.isValid && self.source.isCurrent
+                    })
+                    try shortcut.perform(to: self.source.pid)
                     continuation.resume()
                 } catch { continuation.resume(throwing: error) }
             }
         }
-        // Let the transaction observe the command's clipboard version before cancellation cleanup.
-    }
-}
-
-private final class NativeCopyMenuAccess: BrowserCopyMenuAccess {
-    struct Node: Hashable {
-        let element: AXUIElement
-        static func == (lhs: Node, rhs: Node) -> Bool { CFEqual(lhs.element, rhs.element) }
-        func hash(into hasher: inout Hasher) { hasher.combine(CFHash(element)) }
-    }
-    private let source: BrowserCopySource
-    private let permit: BrowserCopyPermit
-    init(source: BrowserCopySource, permit: BrowserCopyPermit) { self.source = source; self.permit = permit }
-    private func prepare(_ node: Node) -> Bool {
-        guard permit.isValid, source.isCurrent else { return false }
-        AXUIElementSetMessagingTimeout(node.element, 0.08)
-        return true
-    }
-    private func value(_ node: Node, _ attribute: String) -> CFTypeRef? {
-        guard prepare(node) else { return nil }
-        var result: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(node.element, attribute as CFString, &result) == .success else { return nil }
-        return result
-    }
-    func menuBar() -> Node? {
-        let app = Node(element: AXUIElementCreateApplication(source.pid))
-        guard let result = value(app, "AXMenuBar"), CFGetTypeID(result) == AXUIElementGetTypeID() else { return nil }
-        return Node(element: unsafeBitCast(result, to: AXUIElement.self))
-    }
-    func identifier(_ node: Node) -> String? { value(node, "AXIdentifier") as? String }
-    func command(_ node: Node) -> String? { value(node, "AXMenuItemCmdChar") as? String }
-    func modifiers(_ node: Node) -> Int? { (value(node, "AXMenuItemCmdModifiers") as? NSNumber)?.intValue }
-    func enabled(_ node: Node) -> Bool { (value(node, "AXEnabled") as? NSNumber)?.boolValue == true }
-    func children(_ node: Node, limit: Int) -> [Node] {
-        guard limit > 0, prepare(node) else { return [] }
-        var values: CFArray?
-        guard AXUIElementCopyAttributeValues(node.element, kAXChildrenAttribute as CFString, 0, limit, &values) == .success, let values else { return [] }
-        return (values as [AnyObject]).compactMap {
-            guard CFGetTypeID($0) == AXUIElementGetTypeID() else { return nil }
-            return Node(element: unsafeBitCast($0, to: AXUIElement.self))
-        }
-    }
-    func press(_ node: Node) throws {
-        guard prepare(node), permit.isValid, source.isCurrent else { throw CancellationError() }
-        let error = AXUIElementPerformAction(node.element, kAXPressAction as CFString)
-        guard error == .success else { throw AppError.message("浏览器复制命令未完成（AX \(error.rawValue)）。") }
+        // Do not throw after posting: the clipboard transaction must observe the copied version first.
     }
 }

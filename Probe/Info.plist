@@ -6,8 +6,8 @@
 <key>CFBundleName</key><string>SelectEnglishProbe</string>
 <key>CFBundleExecutable</key><string>SelectEnglishProbe</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleVersion</key><string>15</string>
-<key>CFBundleShortVersionString</key><string>0.10.2</string>
+<key>CFBundleVersion</key><string>16</string>
+<key>CFBundleShortVersionString</key><string>0.10.3</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>NSHighResolutionCapable</key><true/>
 </dict></plist>

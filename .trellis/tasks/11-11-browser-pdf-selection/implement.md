@@ -14,3 +14,6 @@ Requested userphysicaltest inoriginalcustomPDF again aftercopyenable; awaitingå·
 
 ## Native copy attempt outcome
 User physicaltest on0.10.2 returned nofreshcopytext via UI, no sections; no privateclipboardtext read bytools. This does NOTprove scannedPDF. Investigate closed-menu AXPress dispatch versuscustomviewer keyboard-onlycopy versuslostselection beforemaking moreblindbuilds. Userasked once whethermanual Cmd+C/paste works withoutforce todisambiguate. Nativebuilt-inW3Ccandidate remainsunverifiedseparately. Sourceerrorwordingchangedto neutral nofreshcopytext. Do notarchiveorclaimsuccess.
+
+## Targeted shortcut revision checkpoint
+Manual Cmd+C/paste confirmed by user. Changed appfeature to fixed C keyCode8+Command down/up viaCGEvent.postToPid(originalbrowserpid); oldAXmenu code removed. Ninefake/offlinegroups, universalbuild/signature and independentreview PASS. Native0.10.3/build16 installed withpreviouscandidateinTrash. CurrentprocessAX/inputauthorized/listenercreated+enabled; copyFallbackpref1 confirmed; noresignafterpermissions. Awaitinguserphysicaltest inactualPDFkeepingbrowserforegrounduntilresult. Synthetictests doNOTprovebrowserconsumption/selectionsurvival. No selectedprivateparagraph, privatePDFURL orclipboardbackupdata persisted.

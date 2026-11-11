@@ -1,61 +1,50 @@
 import Foundation
 
-final class FakeMenu: BrowserCopyMenuAccess {
-    var nodes: [Int: [Int]] = [0: [1], 1: [2], 2: [3]]
-    var identifiers: [Int: String] = [3: "copy:"]
-    var commands: [Int: String] = [:]
-    var masks: [Int: Int] = [:]
-    var enabledItems: Set<Int> = [3]
-    var pressed: [Int] = []
-    var enabledHook: (() -> Void)?
-    func children(_ node: Int, limit: Int) -> [Int] { Array((nodes[node] ?? []).prefix(limit)) }
-    func identifier(_ node: Int) -> String? { identifiers[node] }
-    func command(_ node: Int) -> String? { commands[node] }
-    func modifiers(_ node: Int) -> Int? { masks[node] }
-    func enabled(_ node: Int) -> Bool { enabledHook?(); return enabledItems.contains(node) }
-    func press(_ node: Int) throws { pressed.append(node) }
+final class FakePoster: BrowserCopyEventPoster {
+    var created: [BrowserCopyKeyIntent] = []
+    var posted: [(pid_t, BrowserCopyKeyIntent)] = []
+    var failKeyUpCreation = false
+    var creationHook: (() -> Void)?
+    var postHook: (() -> Void)?
+    func make(_ intent: BrowserCopyKeyIntent) -> BrowserCopyKeyIntent? {
+        created.append(intent)
+        creationHook?()
+        return !intent.keyDown && failKeyUpCreation ? nil : intent
+    }
+    func post(_ event: BrowserCopyKeyIntent, to pid: pid_t) { posted.append((pid, event)); postHook?() }
 }
 func check(_ value: @autoclosure () -> Bool, _ message: String) { precondition(value(), message) }
 let date = Date(timeIntervalSince1970: 1)
 let source = BrowserCopySource(pid: 12, launchDate: date, bundleID: "com.google.Chrome")
-check(source.matches(pid: 12, launchDate: date, bundleID: "com.google.Chrome"), "same browser process accepted")
-check(!source.matches(pid: 13, launchDate: date, bundleID: "com.google.Chrome"), "front app switch rejected")
+check(source.matches(pid: 12, launchDate: date, bundleID: "com.google.Chrome"), "same browser accepted")
+check(!source.matches(pid: 13, launchDate: date, bundleID: "com.google.Chrome"), "foreground process switch rejected")
 check(!source.matches(pid: 12, launchDate: date.addingTimeInterval(1), bundleID: "com.google.Chrome"), "PID reuse rejected")
-let other = BrowserCopySource(pid: 12, launchDate: date, bundleID: "example.editor")
-check(!other.matches(pid: 12, launchDate: date, bundleID: "example.editor"), "non-browser never copied")
-let menu = FakeMenu()
+let editor = BrowserCopySource(pid: 12, launchDate: date, bundleID: "example.editor")
+check(!editor.matches(pid: 12, launchDate: date, bundleID: "example.editor"), "unknown app never copied")
 var current = true
-let search = BrowserCopyMenuSearch(access: menu, isCurrent: { current }, now: { 0 })
-let found = try search.find(in: 0)
-try search.invoke(found)
-check(menu.pressed == [3], "actual search and action use native Copy identifier")
-menu.pressed = []
+let poster = FakePoster()
+let shortcut = BrowserCopyShortcut(poster: poster, isCurrent: { current })
+try shortcut.perform(to: 12)
+check(poster.posted.count == 2 && poster.posted.allSatisfy { $0.0 == 12 }, "both events target original PID only")
+check(poster.posted.map(\.1) == [BrowserCopyKeyIntent(keyCode: 8, keyDown: true, command: true), BrowserCopyKeyIntent(keyCode: 8, keyDown: false, command: true)], "exact C down/up with Command intent")
+poster.posted = []
+poster.created = []
 current = false
-do { try search.invoke(found); fatalError("copied stale source") } catch is CancellationError {}
-check(menu.pressed.isEmpty, "cancelled source has no copy side effect")
+do { try shortcut.perform(to: 12); fatalError("posted stale source") } catch is CancellationError {}
+check(poster.created.isEmpty && poster.posted.isEmpty, "cancel before start creates/posts nothing")
 current = true
-menu.enabledHook = { current = false }
-do { try search.invoke(found); fatalError("copied source changed during enabled check") } catch is CancellationError {}
-check(menu.pressed.isEmpty, "source rechecked immediately before action")
-menu.enabledHook = nil
+poster.creationHook = { current = false }
+do { try shortcut.perform(to: 12); fatalError("posted after source changed during preparation") } catch is CancellationError {}
+check(poster.posted.isEmpty, "source checked again immediately before key-down")
+poster.creationHook = nil
 current = true
-menu.identifiers = [:]
-menu.commands[3] = "C"
-menu.masks[3] = 0
-let shortcut = try search.find(in: 0)
-check(shortcut == 3, "standard Command-C accepted without localized title")
-menu.masks[3] = 8
-do { _ = try search.find(in: 0); fatalError("accepted non-Command shortcut") } catch {}
-menu.masks[3] = 0
-menu.enabledItems = []
-do { _ = try search.find(in: 0); fatalError("accepted disabled Copy") } catch {}
+poster.failKeyUpCreation = true
+do { try shortcut.perform(to: 12); fatalError("posted without releasable key") } catch {}
+check(poster.posted.isEmpty, "creation failure does not leave a key down")
+poster.failKeyUpCreation = false
 let permit = BrowserCopyPermit()
-permit.cancel()
-let cancelled = BrowserCopyMenuSearch(access: menu, isCurrent: { permit.isValid }, now: { 0 })
-do { _ = try cancelled.find(in: 0); fatalError("searched after cancellation") } catch is CancellationError {}
-var clock: TimeInterval = 0
-let expired = BrowserCopyMenuSearch(access: menu, isCurrent: { true }, now: { clock += 1; return clock })
-do { _ = try expired.find(in: 0); fatalError("ignored deadline") } catch {}
-menu.nodes = [0: [1], 1: [0]]
-do { _ = try search.find(in: 0); fatalError("cycle produced Copy") } catch {}
-print("Browser copy: source/identity/menu/cancel/race/deadline/cycle checks passed")
+poster.postHook = { current = false; permit.cancel() }
+let cancellable = BrowserCopyShortcut(poster: poster, isCurrent: { current && permit.isValid })
+try cancellable.perform(to: 12)
+check(poster.posted.count == 2 && poster.posted.last?.0 == 12 && poster.posted.last?.1.keyDown == false, "cancellation after down still releases original PID")
+print("Browser copy: targeted Command-C intent/source/cancel/creation/cleanup checks passed (fake poster only)")
