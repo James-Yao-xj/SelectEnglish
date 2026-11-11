@@ -17,3 +17,6 @@ User physicaltest on0.10.2 returned nofreshcopytext via UI, no sections; no priv
 
 ## Targeted shortcut revision checkpoint
 Manual Cmd+C/paste confirmed by user. Changed appfeature to fixed C keyCode8+Command down/up viaCGEvent.postToPid(originalbrowserpid); oldAXmenu code removed. Ninefake/offlinegroups, universalbuild/signature and independentreview PASS. Native0.10.3/build16 installed withpreviouscandidateinTrash. CurrentprocessAX/inputauthorized/listenercreated+enabled; copyFallbackpref1 confirmed; noresignafterpermissions. Awaitinguserphysicaltest inactualPDFkeepingbrowserforegrounduntilresult. Synthetictests doNOTprovebrowserconsumption/selectionsurvival. No selectedprivateparagraph, privatePDFURL orclipboardbackupdata persisted.
+
+## External UI blocker
+LatestCUA read returned Macislocked/automaticunlockunavailable. Requested usermanualunlock; no attempttobypassauth. Final0.10.3nativePDFresultnotobserved. Keep taskinprogress/hand-offpending; CUAcompletion_summarymustwaituntilunlock/testoutcomeobserved. Sourcecommitc5b11c0 pushed; sourceunchangedafterfinalsignedinstall.
