@@ -20,3 +20,6 @@ Manual Cmd+C/paste confirmed by user. Changed appfeature to fixed C keyCode8+Com
 
 ## External UI blocker
 LatestCUA read returned Macislocked/automaticunlockunavailable. Requested usermanualunlock; no attempttobypassauth. Final0.10.3nativePDFresultnotobserved. Keep taskinprogress/hand-offpending; CUAcompletion_summarymustwaituntilunlock/testoutcomeobserved. Sourcecommitc5b11c0 pushed; sourceunchangedafterfinalsignedinstall.
+
+## Selection-clearing root-cause checkpoint
+Afterunlock0.10.3physicalteststillnofreshcopy. ActualtargetthenconfirmednativeChromePDF; nohighlightaftertest. PrimaryChromiumOnLeftMouseDownclear+singleclickzero-range explainslossofpreselectedtextbeforestage2. Do notclaimrootfixedorcanvas-onlyproblem. UserpauseChromequestionwas superseded: latestrequest asksselecttextthenForceClickPDFtoolbarblankoutsidebody, avoidingpluginmousedown. AwaitingactualUIresult. Source/runtimeunchanged; no furtherrebuildbeforecontrolledevidence. Researchchrome-selection-order.md andspecupdatedfail-looplesson.
