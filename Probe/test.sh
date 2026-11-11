@@ -22,3 +22,9 @@ swiftc -module-cache-path "$probe_tests/module-cache" Probe/Sources/OnboardingPo
 
 swiftc -module-cache-path "$probe_tests/module-cache" Probe/Sources/SelectionExtraction.swift Probe/Tests/Selection/main.swift -o "$probe_tests/selection-tests"
 "$probe_tests/selection-tests"
+
+swiftc -module-cache-path "$probe_tests/module-cache" Probe/Sources/Analysis.swift Probe/Sources/BrowserCopyFallback.swift Probe/Tests/BrowserCopy/main.swift -framework AppKit -framework ApplicationServices -o "$probe_tests/browser-copy-tests"
+"$probe_tests/browser-copy-tests"
+
+swiftc -parse-as-library -module-cache-path "$probe_tests/module-cache" Probe/Sources/ClipboardSelectionTransaction.swift Probe/Tests/Clipboard/main.swift -framework AppKit -o "$probe_tests/clipboard-tests"
+"$probe_tests/clipboard-tests"

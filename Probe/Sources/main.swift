@@ -37,6 +37,10 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     /// Invalidates AX and AI results after a newer trigger, cancel, or window close.
     private var generation = 0
     private var analysisTask: Task<Void, Never>?
+    private var copyFallbackTask: Task<Void, Never>?
+    private var copyPermit: BrowserCopyPermit?
+    private var copiedSource: BrowserCopySource?
+    private let browserCopyToggle = NSButton(checkboxWithTitle: "允许浏览器 PDF 复制取词（辅助功能读取失败时）", target: nil, action: nil)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -171,7 +175,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func makeSettingsWindow() {
-        let (window, stack) = window(title: "SelectEnglish · AI 设置", width: 720, height: 410)
+        let (window, stack) = window(title: "SelectEnglish · AI 设置", width: 720, height: 540)
         settingsWindow = window
         window.delegate = self
         stack.addArrangedSubview(NSTextField(wrappingLabelWithString: "保存配置后，用力点按会把选中的文字发送到你指定的 AI 接口。未配置时只显示原文。密钥以明文保存在本机用户私有文件中，仅当前用户可读写。旧版升级后需重新输入一次；同一服务留空可保留本地密钥，更换服务域名需输入新密钥。"))
@@ -183,6 +187,10 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         stack.addArrangedSubview(NSTextField(labelWithString: "API 密钥（只输入新密钥，不显示已保存密钥）"))
         keyField.placeholderString = "留空以保留已保存密钥"
         stack.addArrangedSubview(keyField)
+        browserCopyToggle.target = self
+        browserCopyToggle.action = #selector(setBrowserCopyOption)
+        stack.addArrangedSubview(browserCopyToggle)
+        stack.addArrangedSubview(NSTextField(wrappingLabelWithString: "仅在浏览器重按取词失败时临时复制并恢复剪贴板。剪贴板管理器可能记录该文本；并发复制时优先保留你的新内容。手动诊断不会复制。"))
         stack.addArrangedSubview(settingsState)
         stack.addArrangedSubview(buttons([("保存设置", #selector(saveSettings)), ("删除已保存密钥", #selector(deleteKey))]))
         finishLayout(stack)
@@ -260,7 +268,13 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc private func closeOnboarding() { onboardingWindow.performClose(nil) }
 
     @objc private func showResult() { popup.show(at: popupAnchor ?? NSEvent.mouseLocation) }
+    @objc private func setBrowserCopyOption() {
+        invalidate()
+        UserDefaults.standard.set(browserCopyToggle.state == .on, forKey: "selection.browserCopyFallback")
+    }
+
     @objc private func showSettings() {
+        browserCopyToggle.state = UserDefaults.standard.bool(forKey: "selection.browserCopyFallback") ? .on : .off
         endpointField.stringValue = UserDefaults.standard.string(forKey: "ai.endpoint") ?? ""
         modelField.stringValue = UserDefaults.standard.string(forKey: "ai.model") ?? ""
         keyField.stringValue = ""
@@ -320,6 +334,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private func capture(app: NSRunningApplication, automaticallyAnalyze: Bool, anchor: CGPoint = NSEvent.mouseLocation) {
         popupAnchor = anchor
         invalidate()
+        copiedSource = nil
         let requestGeneration = generation
         currentSource = ""
         currentAnalysis = nil
@@ -336,21 +351,70 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
             let readSeconds = ProcessInfo.processInfo.systemUptime - captureStarted
             DispatchQueue.main.async {
                 guard let self, self.generation == requestGeneration else { return }
-                guard self.popup.completeCapture(generation: requestGeneration) else { return }
-                self.lastCapture = "\(name) · \(result.role) · \(result.message)（读取 \(String(format: "%.2f", readSeconds)) 秒）"
-                if result.text.isEmpty {
-                    self.stateLabel.stringValue = AXIsProcessTrusted()
-                        ? "没有读到选中文字。请重新选中英文后用力点按，或在菜单栏查看触发状态。"
-                        : "请从菜单栏“译”打开触发状态，授权辅助功能后重试。"
-                } else { self.stateLabel.stringValue = "已读取选区。" }
-                self.currentSource = result.text
-                self.sourceView.string = result.text
-                self.sourceLabel.stringValue = "SelectEnglish · \(name)"
-                self.refreshDiagnostics()
-                self.showResult()
-                if automaticallyAnalyze && !result.text.isEmpty { self.analyze(bypassReuse: false) }
+                let source = BrowserCopySource(pid: pid, launchDate: launchDate, bundleID: app.bundleIdentifier ?? "")
+                if result.text.isEmpty && automaticallyAnalyze && UserDefaults.standard.bool(forKey: "selection.browserCopyFallback")
+                    && source.isCurrent {
+                    self.copyAfterFailedAX(source: source, result: result, name: name, generation: requestGeneration, readSeconds: readSeconds)
+                    return
+                }
+                self.finishCapture(result, name: name, generation: requestGeneration, readSeconds: readSeconds, automaticallyAnalyze: automaticallyAnalyze)
+
             }
         }
+    }
+
+    /// Keep capture pending until the opt-in copy transaction has finished or been cancelled.
+    @MainActor private func copyAfterFailedAX(source: BrowserCopySource, result: SelectionReader.Result, name: String, generation requestGeneration: Int, readSeconds: TimeInterval) {
+        let permit = BrowserCopyPermit()
+        copyPermit = permit
+        copyFallbackTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer {
+                if self.generation == requestGeneration && !source.isCurrent {
+                    self.copyFallbackTask = nil
+                    self.copyPermit = nil
+                    self.invalidate()
+                    self.stateLabel.stringValue = "已取消，请返回原浏览器重新选文并重按。"
+                }
+            }
+            do {
+                let action = try await BrowserCopyFallback.prepare(source: source, permit: permit)
+                guard self.generation == requestGeneration, permit.isValid, source.isCurrent, !Task.isCancelled else { return }
+                let text = try await ClipboardSelectionTransaction.run(isCurrent: {
+                    self.generation == requestGeneration && permit.isValid && source.isCurrent
+                }, performCopy: { try await action.performCopy() })
+                guard self.generation == requestGeneration, permit.isValid, source.isCurrent, !Task.isCancelled else { return }
+                self.copyFallbackTask = nil
+                self.copyPermit = nil
+                self.copiedSource = source
+                self.finishCapture(SelectionReader.Result(role: "浏览器复制", text: text, message: "已通过浏览器复制读取选区。"), name: name,
+                    generation: requestGeneration, readSeconds: readSeconds, automaticallyAnalyze: true)
+            } catch {
+                guard self.generation == requestGeneration, !Task.isCancelled else { return }
+                self.copyFallbackTask = nil
+                self.copyPermit = nil
+                guard source.isCurrent else { self.invalidate(); return }
+                self.finishCapture(result, name: name, generation: requestGeneration, readSeconds: readSeconds,
+                    automaticallyAnalyze: false, copyFailure: "浏览器复制取词未完成：" + error.localizedDescription)
+            }
+        }
+    }
+
+    private func finishCapture(_ result: SelectionReader.Result, name: String, generation requestGeneration: Int,
+                               readSeconds: TimeInterval, automaticallyAnalyze: Bool, copyFailure: String? = nil) {
+        guard generation == requestGeneration, popup.completeCapture(generation: requestGeneration) else { return }
+        lastCapture = "\(name) · \(result.role) · \(result.message)（AX读取 \(String(format: "%.2f", readSeconds)) 秒）" + (copyFailure ?? "")
+        if result.text.isEmpty {
+            stateLabel.stringValue = copyFailure ?? (AXIsProcessTrusted()
+                ? "没有读到选中文字。请重新选择后重按；网页 PDF 可在设置中启用复制取词。"
+                : "请从菜单栏“译”打开触发状态，授权辅助功能后重试。")
+        } else { stateLabel.stringValue = "已读取选区。" }
+        currentSource = result.text
+        sourceView.string = result.text
+        sourceLabel.stringValue = "SelectEnglish · \(name)"
+        refreshDiagnostics()
+        showResult()
+        if automaticallyAnalyze && !result.text.isEmpty { analyze(bypassReuse: false) }
     }
 
     /// Reuse only the last exact result. The explicit Retry action always bypasses reuse.
@@ -361,6 +425,10 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         resultView.string = ""
         guard !currentSource.isEmpty else { stateLabel.stringValue = "请先在其他应用选中英文，再用力点按。"; return }
         guard currentSource.count <= 20_000 else { stateLabel.stringValue = "原文超过 20,000 个字符，请缩短选区。"; return }
+        if let copiedSource, !copiedSource.isCurrent {
+            stateLabel.stringValue = "请返回原浏览器重新选中文字并重按。"
+            return
+        }
         let settings: AIConfiguration
         do { settings = try configuration() }
         catch { stateLabel.stringValue = "原文已读取；\(error.localizedDescription)"; return }
@@ -382,6 +450,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
                     throw AppError.message("请先在 AI 设置中保存密钥。")
                 }
                 guard self.generation == requestGeneration, !Task.isCancelled else { return }
+                guard self.copiedSource?.isCurrent != false else { throw AppError.message("原浏览器已不是前台，请返回后重新选文并重按。") }
                 self.stateLabel.stringValue = "正在翻译并整理表达…可点击取消。"
                 self.popup.refresh()
                 let requestStarted = ProcessInfo.processInfo.systemUptime
@@ -406,6 +475,10 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func invalidate() {
         generation += 1
+        copyPermit?.cancel()
+        copyPermit = nil
+        copyFallbackTask?.cancel()
+        copyFallbackTask = nil
         popup?.invalidateCapture()
         analysisTask?.cancel()
         analysisTask = nil

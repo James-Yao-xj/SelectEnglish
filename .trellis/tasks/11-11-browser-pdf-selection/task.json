@@ -2,7 +2,7 @@
   "id": "browser-pdf-selection",
   "name": "browser-pdf-selection",
   "title": "Read browser PDF selections",
-  "description": "Support selected text in browser PDF viewers without clipboard or full-document capture",
+  "description": "Support browser PDF selected text with bounded AX extraction and user-approved opt-in clipboard copy fallback",
   "status": "in_progress",
   "dev_type": null,
   "scope": null,
