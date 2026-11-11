@@ -19,3 +19,6 @@ swiftc -module-cache-path "$probe_tests/module-cache" Probe/Sources/PopupMouseEv
 
 swiftc -module-cache-path "$probe_tests/module-cache" Probe/Sources/OnboardingPolicy.swift Probe/Tests/Onboarding/main.swift -o "$probe_tests/onboarding-tests"
 "$probe_tests/onboarding-tests"
+
+swiftc -module-cache-path "$probe_tests/module-cache" Probe/Sources/SelectionExtraction.swift Probe/Tests/Selection/main.swift -o "$probe_tests/selection-tests"
+"$probe_tests/selection-tests"

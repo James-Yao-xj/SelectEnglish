@@ -23,6 +23,10 @@ shasum -a 256 -c SelectEnglish-v0.10.0-beta.1.zip.sha256
 5. “AI 设置”中填写完整 HTTPS chat completions 地址、模型及密钥。先阅读[隐私说明](../PRIVACY.md)：保存后重按会自动向该服务发送选中原文。
 6. 在 TextEdit 输入公开测试句 `I like to read books after school.`，选中并用力点按。读取、AI 请求与展示应依次完成；很简单的句子没有生词是正常结果。
 
+## 浏览器 PDF
+
+可选择文字的浏览器 PDF 正在 `fix/browser-pdf-selection` 分支修复，候选版本为 0.10.1 / build 14；本页所链接的已发布 v0.10.0-beta.1 不包含该修复。浏览器必须暴露实际辅助功能选区，扫描件和纯图片仍不支持。支持边界、读取检查和实测进度见[PDF 选区说明](BROWSER-PDF.md)。
+
 ## 常见问题
 
 | 现象 | 检查方法 |
