@@ -1,0 +1,5 @@
+# Apple privacy manifest scope
+
+Checked2026-11-17 using Apple primary documentation. No manifest-based blocker was established for direct GitHub/DeveloperID macOS distribution. The current [overview](https://developer.apple.com/documentation/bundleresources/privacy-manifest-files) lists required-reason API platform scope without macOS; [enforcement guidance](https://developer.apple.com/documentation/bundleresources/describing-use-of-required-reason-api) describes AppStoreConnect. The generic [systemUptime page](https://developer.apple.com/documentation/foundation/processinfo/systemuptime) nevertheless recommends declaring usage.
+
+An optional future manifest could describe SystemBootTime reason35F9.1 for local elapsed-time measurements and UserDefaults reasonCA92.1 for this app's preferences, after checking the then-current definitions. This creates no runtime permission and does not replace DeveloperID signing or notarization. Do not turn optional direct-distribution preparation into an invented release gate. No manifest/source/package changes were made for this investigation.
