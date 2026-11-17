@@ -39,6 +39,9 @@ struct Analysis: Codable, Equatable {
             throw AppError.message("AI 返回的生词、整句解释或固定表达字段不完整，请重试。")
         }
         if let source {
+            guard vocabulary.allSatisfy({ Self.containsSourceForm($0.word, in: source) }) else {
+                throw AppError.message("AI 返回的生词与原文词形不符，请重试。")
+            }
             let boundaries = CharacterSet.whitespacesAndNewlines.union(.punctuationCharacters)
             // Trim only boundaries. Internal punctuation and inflections stay intact.
             func normalized(_ word: String) -> String { word.trimmingCharacters(in: boundaries).lowercased() }
@@ -58,6 +61,39 @@ struct Analysis: Codable, Equatable {
             }
         }
         return self
+    }
+
+    /// Match original word forms without treating parts of compounds or technical names as words.
+    ///
+    /// Whitespace runs may differ in phrases. Case may differ; connectors and inflections may not.
+    private static func containsSourceForm(_ word: String, in source: String) -> Bool {
+        func compactWhitespace(_ text: String) -> String {
+            text.split(whereSeparator: { $0.isWhitespace }).joined(separator: " ")
+        }
+        let source = compactWhitespace(source)
+        let word = compactWhitespace(word)
+        let core = CharacterSet.alphanumerics.union(.nonBaseCharacters)
+        let suffixes = CharacterSet(charactersIn: "+#_")
+        let connectors = CharacterSet(charactersIn: "-'’‐‑")
+        func isAtom(_ scalar: Unicode.Scalar) -> Bool { core.contains(scalar) || suffixes.contains(scalar) }
+        func startsInsideToken(_ prefix: Substring) -> Bool {
+            let scalars = prefix.unicodeScalars
+            guard let previous = scalars.last else { return false }
+            if isAtom(previous) || previous == "." { return true }
+            return connectors.contains(previous) && scalars.dropLast().last.map(isAtom) == true
+        }
+        func endsInsideToken(_ suffix: Substring) -> Bool {
+            let scalars = suffix.unicodeScalars
+            guard let next = scalars.first else { return false }
+            if isAtom(next) { return true }
+            return (connectors.contains(next) || next == ".") && scalars.dropFirst().first.map(isAtom) == true
+        }
+        var search = source.startIndex..<source.endIndex
+        while let range = source.range(of: word, options: [.caseInsensitive, .literal], range: search) {
+            if !startsInsideToken(source[..<range.lowerBound]) && !endsInsideToken(source[range.upperBound...]) { return true }
+            search = range.upperBound..<source.endIndex
+        }
+        return false
     }
 
     /// Share the same content order between the attributed popup and stored-result view.

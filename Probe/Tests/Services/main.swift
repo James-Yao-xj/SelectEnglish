@@ -190,6 +190,51 @@ func check(_ condition: @autoclosure () -> Bool, _ message: String) throws {
         }
         print("PASS: exact single-word vocabulary, case/boundary punctuation and preserved inflection")
 
+        func vocabularyResult(_ word: String) -> Analysis {
+            Analysis(translation: "测试译文", expressions: [], vocabulary: [.init(word: word, partOfSpeech: "测试词性", meaning: "测试词义")], sentenceExplanation: "测试解析。")
+        }
+        for (source, word) in [
+            ("The scientist scrutinized the results.", "banana"),
+            ("The scientists scrutinized the results.", "scientist"),
+            ("A neuroscientist led the study.", "scientist"),
+            ("A scientist-led study.", "scientist"),
+            ("A scientist-led study.", "led"),
+            ("They checked the internet.", "net"),
+            ("They use C++ and .NET.", "C"),
+            ("They use C++ and .NET.", "NET"),
+            ("They use C++ and .NET.", "C#"),
+            ("They discuss well-being.", "wellbeing"),
+            ("They discuss well‑being.", "well-being"),
+            ("They can't proceed.", "cant")
+        ] {
+            do { _ = try vocabularyResult(word).validated(source: source); throw AppError.message("accepted unrelated source form") }
+            catch { try check(error.localizedDescription != "accepted unrelated source form", "sentence vocabulary must retain complete source forms") }
+        }
+        for (source, word) in [
+            ("The SCIENTIST scrutinized the results.", "scientist"),
+            ("A 'scientist' scrutinized the results.", "scientist"),
+            ("A scientist-led study.", "scientist-led"),
+            ("They use C++ and .NET.", "C++"),
+            ("They use C++ and .NET.", ".NET"),
+            ("They use C#.", "C#"),
+            ("They discuss well-being.", "well-being"),
+            ("They can't proceed.", "can't"),
+            ("They study neural\n  networks.", "neural networks"),
+            ("A neuroscientist and a scientist.", "scientist")
+        ] { _ = try vocabularyResult(word).validated(source: source) }
+        let unrelatedContent = String(decoding: try JSONEncoder().encode(vocabularyResult("banana")), as: UTF8.self)
+        let unrelatedEnvelope = try JSONSerialization.data(withJSONObject: ["choices": [["message": ["content": unrelatedContent]]]])
+        MockProtocol.handler = { _ in (200, unrelatedEnvelope) }
+        do {
+            _ = try await client.analyze(text: "The scientist scrutinized the results.", configuration: settings, key: "test-key")
+            throw AppError.message("accepted unrelated HTTP vocabulary")
+        } catch {
+            try check(error.localizedDescription != "accepted unrelated HTTP vocabulary"
+                && !error.localizedDescription.contains("scientist") && !error.localizedDescription.contains("banana"),
+                "production HTTP validation rejects unrelated vocabulary without echoing selected text")
+        }
+        print("PASS: sentence vocabulary provenance, technical boundaries and multiline source forms")
+
         try check(singleWord.displayText.contains("原文没有明显的固定表达。"), "single word can have no fixed expressions")
         let noWords = Analysis(translation: "他在。", expressions: [], vocabulary: [], sentenceExplanation: "这是一个简短陈述。")
         _ = try noWords.validated(source: "He is here.")
