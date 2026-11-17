@@ -145,3 +145,6 @@ ChromePDFium clears a prior selection on new leftMouseDown before pressurestage2
 ## Detailed workflow contracts
 
 Read [selection-workflows.md](selection-workflows.md) for registered commands, preview confirmation, deferred cancellation, scoped PDF candidates and sentence vocabulary source forms. Read [release-evidence.md](release-evidence.md) before changing release scripts or CI evidence. These contracts are included explicitly in the current task context manifests.
+
+## Native QA connection diagnosis
+An inventory or browser-extension timeout does not prove the Mac is locked or all computer use is unavailable. Try the known target app directly with the supported CUA app API, then verify current UI state. Keep browser extension failures separate from native app control. Never infer authorization from a stale enabled Settings toggle; current-process AX/listen diagnostics remain authoritative. Do not bypass authentication or use shell UI automation as a fallback.
