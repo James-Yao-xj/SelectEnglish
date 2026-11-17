@@ -69,6 +69,7 @@ final class ResultPopup: NSObject {
     let resultView = NSTextView()
     let stateLabel = NSTextField(wrappingLabelWithString: "选中英文后，用力点按触控板即可翻译。")
     let sourceLabel = NSTextField(labelWithString: "SelectEnglish")
+    var onMouseDown: ((TimeInterval) -> Void)?
     var onDismiss: (() -> Void)?
     var onRetry: (() -> Void)?
     var onFavorite: (() -> Void)?
@@ -76,6 +77,16 @@ final class ResultPopup: NSObject {
     var onCancel: (() -> Void)?
     private let panel = LookupPanel(contentRect: NSRect(x: 0, y: 0, width: 420, height: 250),
                                     styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+    private var analyzeButton: NSButton!
+    var requiresAnalysisConfirmation = false {
+        didSet {
+            let title = requiresAnalysisConfirmation ? "分析选文" : "重试"
+            analyzeButton.attributedTitle = NSAttributedString(string: title, attributes: [
+                .font: NSFont.systemFont(ofSize: 12), .foregroundColor: KraftPaperView.secondaryInk
+            ])
+            analyzeButton.setAccessibilityLabel(title)
+        }
+    }
     private let resultScroll = NSScrollView()
     private var localMonitor: Any?
     private var globalMonitor: Any?
@@ -143,7 +154,8 @@ final class ResultPopup: NSObject {
         stack.addArrangedSubview(resultScroll)
         let footer = NSStackView()
         footer.spacing = 12
-        footer.addArrangedSubview(action("重试", selector: #selector(retry)))
+        analyzeButton = action("重试", selector: #selector(retry))
+        footer.addArrangedSubview(analyzeButton)
         footer.addArrangedSubview(action("收藏", selector: #selector(favorite)))
         footer.addArrangedSubview(action("取消", selector: #selector(cancel)))
         let footerSpace = NSView()
@@ -176,6 +188,7 @@ final class ResultPopup: NSObject {
 
     /// Both event monitors use the same decision, including when AX is pending but hidden.
     private func handleMouseDown(_ event: NSEvent) {
+        onMouseDown?(event.timestamp)
         if dismissalState.shouldDismissMouseDown(timestamp: event.timestamp, popupVisible: panel.isVisible,
             pointInsidePopup: panel.frame.contains(PopupMouseEvent.screenPoint(for: event))) { dismiss() }
     }

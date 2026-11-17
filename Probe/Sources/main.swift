@@ -2,7 +2,7 @@ import AppKit
 import ApplicationServices
 
 /// Own the native result, settings, and notebook windows for one menu-bar app.
-final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
+final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem!
     private let monitor = ForceClickMonitor()
     private let readerQueue = DispatchQueue(label: "com.selectenglish.selection")
@@ -39,7 +39,10 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var analysisTask: Task<Void, Never>?
     private var copyFallbackTask: Task<Void, Never>?
     private var copyPermit: BrowserCopyPermit?
-    private var copiedSource: BrowserCopySource?
+    private let selectionHotKey = SelectionHotKey()
+    private var menuSource: NSRunningApplication?
+    private var menuSourceIdentity: SelectionCommandIdentity?
+    private var hotKeyStatusItem: NSMenuItem?
     private let browserCopyToggle = NSButton(checkboxWithTitle: "允许浏览器 PDF 复制取词（辅助功能读取失败时）", target: nil, action: nil)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -50,9 +53,11 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         makeNotebookWindow()
         makeDiagnosticsWindow()
         makeOnboardingWindow()
-        monitor.onTrigger = { [weak self] app, point in self?.capture(app: app, automaticallyAnalyze: true, anchor: point) }
+        monitor.onTrigger = { [weak self] app, point, timestamp in self?.capture(app: app, automaticallyAnalyze: true, anchor: point, triggerTimestamp: timestamp) }
         monitor.onStatusChange = { [weak self] in self?.refreshDiagnostics() }
         monitor.start()
+        selectionHotKey.start { [weak self] in self?.translateForegroundSelection() }
+        hotKeyStatusItem?.title = selectionHotKey.status
         diagnosticTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             guard let self, self.diagnosticsWindow.isVisible || self.onboardingWindow.isVisible else { return }
             self.refreshDiagnostics()
@@ -84,6 +89,10 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
             item.target = self
             appMenu.insertItem(item, at: index + 1)
         }
+        let translate = NSMenuItem(title: "翻译当前选区（PDF 推荐）", action: #selector(translateMenuSelection), keyEquivalent: "")
+        translate.target = self
+        appMenu.insertItem(translate, at: 0)
+        appMenu.delegate = self
         root.submenu = appMenu
         let editRoot = NSMenuItem()
         let editMenu = NSMenu(title: "编辑")
@@ -98,12 +107,15 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         statusItem.button?.title = "译"
         statusItem.button?.toolTip = "SelectEnglish"
         let menu = NSMenu()
-        for (title, action) in [("显示翻译", #selector(showResult)), ("AI 设置…", #selector(showSettings)),
+        menu.delegate = self
+        for (title, action) in [("翻译当前选区（PDF 推荐）", #selector(translateMenuSelection)), ("显示翻译", #selector(showResult)), ("AI 设置…", #selector(showSettings)),
                                 ("我的收藏…", #selector(showNotebook)), ("触发与选区状态…", #selector(showDiagnostics)),
                                 ("使用帮助与隐私…", #selector(showOnboarding))] {
             let item = menu.addItem(withTitle: title, action: action, keyEquivalent: "")
             item.target = self
         }
+        hotKeyStatusItem = menu.addItem(withTitle: selectionHotKey.status, action: nil, keyEquivalent: "")
+        hotKeyStatusItem?.isEnabled = false
         menu.addItem(.separator())
         menu.addItem(withTitle: "退出 SelectEnglish", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         statusItem.menu = menu
@@ -160,6 +172,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func makeResultWindow() {
         popup = ResultPopup()
+        popup.onMouseDown = { [weak self] timestamp in self?.monitor.observeMouseDown(timestamp: timestamp) }
         popup.onDismiss = { [weak self] in
             guard let self else { return }
             if self.analysisTask != nil || self.popup.hasPendingCapture {
@@ -178,7 +191,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let (window, stack) = window(title: "SelectEnglish · AI 设置", width: 720, height: 540)
         settingsWindow = window
         window.delegate = self
-        stack.addArrangedSubview(NSTextField(wrappingLabelWithString: "保存配置后，用力点按会把选中的文字发送到你指定的 AI 接口。未配置时只显示原文。密钥以明文保存在本机用户私有文件中，仅当前用户可读写。旧版升级后需重新输入一次；同一服务留空可保留本地密钥，更换服务域名需输入新密钥。"))
+        stack.addArrangedSubview(NSTextField(wrappingLabelWithString: "保存配置后，重按或显式翻译命令直接读到的焦点选文会发送到指定的 AI 接口；复制结果和 PDF 子树候选须先确认预览。未配置时只显示原文。密钥以明文保存在本机用户私有文件中，仅当前用户可读写。旧版升级后需重新输入一次；同一服务留空可保留本地密钥，更换服务域名需输入新密钥。"))
         stack.addArrangedSubview(NSTextField(labelWithString: "完整 HTTPS 接口地址（包含 /chat/completions）"))
         endpointField.placeholderString = "https://你的服务地址/v1/chat/completions"
         stack.addArrangedSubview(endpointField)
@@ -190,7 +203,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         browserCopyToggle.target = self
         browserCopyToggle.action = #selector(setBrowserCopyOption)
         stack.addArrangedSubview(browserCopyToggle)
-        stack.addArrangedSubview(NSTextField(wrappingLabelWithString: "仅在浏览器重按取词失败时向原浏览器发送 ⌘C，临时复制并恢复剪贴板；不监听全局键盘。剪贴板管理器可能记录文本，并发复制时优先保留新内容。手动诊断不会复制。"))
+        stack.addArrangedSubview(NSTextField(wrappingLabelWithString: "重按、菜单翻译或 ⌃⌥⌘T 读取浏览器选区失败时，可向原浏览器发送 ⌘C，临时复制并尝试恢复剪贴板。复制文字必须核对并点击“分析选文”才会发送 AI。不监听全局键盘；剪贴板管理器可能记录文本。手动诊断不会复制。"))
         stack.addArrangedSubview(settingsState)
         stack.addArrangedSubview(buttons([("保存设置", #selector(saveSettings)), ("删除已保存密钥", #selector(deleteKey))]))
         finishLayout(stack)
@@ -231,14 +244,14 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let helpScroll = scroll(help, height: 340)
         help.string = """
         1. 先了解会发送什么
-        配置 AI 后，在其他应用选中英文并用力点按触控板，选中文字就会发送到你填写的 HTTPS AI 接口；“重试”也会发送。未配置时只显示原文。请勿选择密码、个人隐私或不宜交给该服务的内容。
+        配置 AI 后，在其他应用选中英文并重按或使用翻译选区命令，直接从焦点元素读取的选文会发送到你填写的 HTTPS AI 接口；“重试”也会发送。浏览器复制结果和可能不完整的 PDF 子树候选必须先核对预览，再点击“分析选文”才会发送。未配置时只显示原文。请勿选择密码、个人隐私或不宜交给该服务的内容。
 
         2. 配置你自己的 AI 服务
         在“AI 设置”填写完整接口地址、模型和密钥。服务可能收费；数据保留和使用方式由该服务的政策决定。应用不会替你创建服务账户。
 
         3. 按需授权，再测试选区
         “辅助功能”用于读取目标应用的选中文字；“输入监听”用于观察鼠标和触控板手势，不监听键盘。点击下面的授权按钮，按系统提示在“隐私与安全性”中允许，然后重新启动监听。权限已允许也不代表当前监听已创建或正在启用，请核对下方状态。
-        需要支持用力点按的触控板。可先在 TextEdit 或浏览器中选中一小段英文测试；“触发与选区状态”可手动读取指定应用，手动读取不会自动发送 AI。
+        重按需要支持用力点按的触控板。PDF 可选中文字后按 Control + Option + Command + T（⌃⌥⌘T），或点菜单栏“译”→“翻译当前选区”，避免再次点击 PDF 清空选区。快捷键冲突会显示在触发状态中。可先在 TextEdit 或浏览器中选中一小段英文测试；“触发与选区状态”可手动读取指定应用，手动读取不会自动发送 AI。
 
         本机保存与隐私
         密钥以明文保存在 ~/Library/Application Support/SelectEnglish/Private/api-key，仅当前用户可读写；这不是加密保险箱。可在“AI 设置”删除密钥。只有点击“收藏”才会把原文和分析保存到本机收藏夹；可在“我的收藏”删除。应用不会把收藏自动上传到自己的服务器。
@@ -266,6 +279,51 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     @objc private func closeOnboarding() { onboardingWindow.performClose(nil) }
+
+    func menuWillOpen(_ menu: NSMenu) {
+        menuSource = externalForegroundApplication()
+        menuSourceIdentity = menuSource.map { SelectionCommandIdentity(pid: $0.processIdentifier, launchDate: $0.launchDate) }
+    }
+
+    private func externalForegroundApplication() -> NSRunningApplication? {
+        guard let app = NSWorkspace.shared.frontmostApplication, !app.isTerminated,
+              app.processIdentifier != ProcessInfo.processInfo.processIdentifier else { return nil }
+        return app
+    }
+
+    @objc private func translateMenuSelection() {
+        let source = menuSource
+        let identity = menuSourceIdentity
+        menuSource = nil
+        menuSourceIdentity = nil
+        // Run after native menu tracking closes. Do not reactivate a stale source.
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            guard let source, let identity, let current = self.externalForegroundApplication(),
+                  identity.matches(pid: current.processIdentifier, launchDate: current.launchDate) else {
+                self.showSelectionCommandError()
+                return
+            }
+            self.capture(app: source, automaticallyAnalyze: true)
+        }
+    }
+
+    private func translateForegroundSelection() {
+        guard let source = externalForegroundApplication() else { showSelectionCommandError(); return }
+        capture(app: source, automaticallyAnalyze: true)
+    }
+
+    private func showSelectionCommandError() {
+        invalidate()
+        // A failed command must not leave an older snapshot available as the current selection.
+        currentSource = ""
+        currentAnalysis = nil
+        sourceView.string = ""
+        resultView.string = ""
+        popup.requiresAnalysisConfirmation = false
+        stateLabel.stringValue = "请先在浏览器或其他应用选中文字，再按 ⌃⌥⌘T 或打开菜单栏“译”翻译选区。"
+        showResult()
+    }
 
     @objc private func showResult() { popup.show(at: popupAnchor ?? NSEvent.mouseLocation) }
     @objc private func setBrowserCopyOption() {
@@ -331,10 +389,10 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     /// Capture before opening the window. A newer action invalidates this AX result.
-    private func capture(app: NSRunningApplication, automaticallyAnalyze: Bool, anchor: CGPoint = NSEvent.mouseLocation) {
+    private func capture(app: NSRunningApplication, automaticallyAnalyze: Bool, anchor: CGPoint = NSEvent.mouseLocation, triggerTimestamp: TimeInterval? = nil) {
         popupAnchor = anchor
         invalidate()
-        copiedSource = nil
+        popup.requiresAnalysisConfirmation = false
         let requestGeneration = generation
         currentSource = ""
         currentAnalysis = nil
@@ -345,13 +403,24 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let launchDate = app.launchDate
         let name = app.localizedName ?? "目标应用"
         let captureStarted = ProcessInfo.processInfo.systemUptime
-        popup.beginCapture(generation: requestGeneration, startedAt: captureStarted)
+        popup.beginCapture(generation: requestGeneration, startedAt: triggerTimestamp ?? captureStarted)
         readerQueue.async { [weak self] in
             let result = SelectionReader.read(pid: pid, launchDate: launchDate)
+            // Copy setup has its own 80 ms window check after the bounded AX read.
+            let window = result.text.isEmpty && automaticallyAnalyze ? CapturedSelectionWindow.capture(pid: pid) : nil
             let readSeconds = ProcessInfo.processInfo.systemUptime - captureStarted
             DispatchQueue.main.async {
                 guard let self, self.generation == requestGeneration else { return }
-                let source = BrowserCopySource(pid: pid, launchDate: launchDate, bundleID: app.bundleIdentifier ?? "")
+                if automaticallyAnalyze {
+                    let foreground = self.externalForegroundApplication()
+                    guard SelectionCommandIdentity(pid: pid, launchDate: launchDate).matches(
+                        pid: foreground?.processIdentifier, launchDate: foreground?.launchDate), window?.isCurrent != false else {
+                        self.invalidate()
+                        self.stateLabel.stringValue = "来源已改变，已取消读取。请重新选择后翻译。"
+                        return
+                    }
+                }
+                let source = BrowserCopySource(pid: pid, launchDate: launchDate, bundleID: app.bundleIdentifier ?? "", window: window)
                 if result.text.isEmpty && automaticallyAnalyze && UserDefaults.standard.bool(forKey: "selection.browserCopyFallback")
                     && source.isCurrent {
                     self.copyAfterFailedAX(source: source, result: result, name: name, generation: requestGeneration, readSeconds: readSeconds)
@@ -386,9 +455,8 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 guard self.generation == requestGeneration, permit.isValid, source.isCurrent, !Task.isCancelled else { return }
                 self.copyFallbackTask = nil
                 self.copyPermit = nil
-                self.copiedSource = source
                 self.finishCapture(SelectionReader.Result(role: "浏览器复制", text: text, message: "已通过浏览器复制读取选区。"), name: name,
-                    generation: requestGeneration, readSeconds: readSeconds, automaticallyAnalyze: true)
+                    generation: requestGeneration, readSeconds: readSeconds, automaticallyAnalyze: true, origin: .clipboard)
             } catch {
                 guard self.generation == requestGeneration, !Task.isCancelled else { return }
                 self.copyFallbackTask = nil
@@ -401,20 +469,28 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func finishCapture(_ result: SelectionReader.Result, name: String, generation requestGeneration: Int,
-                               readSeconds: TimeInterval, automaticallyAnalyze: Bool, copyFailure: String? = nil) {
+                               readSeconds: TimeInterval, automaticallyAnalyze: Bool, copyFailure: String? = nil, origin: SelectionTextOrigin = .accessibility) {
         guard generation == requestGeneration, popup.completeCapture(generation: requestGeneration) else { return }
+        let effectiveOrigin: SelectionTextOrigin = result.requiresConfirmation ? .scopedAccessibility : origin
         lastCapture = "\(name) · \(result.role) · \(result.message)（AX读取 \(String(format: "%.2f", readSeconds)) 秒）" + (copyFailure ?? "")
         if result.text.isEmpty {
             stateLabel.stringValue = copyFailure ?? (AXIsProcessTrusted()
-                ? "没有读到选中文字。请重新选择后重按；网页 PDF 可在设置中启用复制取词。"
+                ? "没有读到选中文字。PDF 请重新选中后按 ⌃⌥⌘T；也可在设置中启用复制取词。"
                 : "请从菜单栏“译”打开触发状态，授权辅助功能后重试。")
-        } else { stateLabel.stringValue = "已读取选区。" }
+        } else {
+            switch effectiveOrigin {
+            case .accessibility: stateLabel.stringValue = "已读取选区。"
+            case .scopedAccessibility: stateLabel.stringValue = "PDF 辅助读取预览：可能不完整，请核对文字后点击“分析选文”。"
+            case .clipboard: stateLabel.stringValue = "复制预览：请核对文字，点击“分析选文”后才会发送给 AI。"
+            }
+        }
+        popup.requiresAnalysisConfirmation = effectiveOrigin.requiresConfirmation
         currentSource = result.text
         sourceView.string = result.text
         sourceLabel.stringValue = "SelectEnglish · \(name)"
         refreshDiagnostics()
         showResult()
-        if automaticallyAnalyze && !result.text.isEmpty { analyze(bypassReuse: false) }
+        effectiveOrigin.analyzeAutomaticallyIfAllowed(requested: automaticallyAnalyze && !result.text.isEmpty) { analyze(bypassReuse: false) }
     }
 
     /// Reuse only the last exact result. The explicit Retry action always bypasses reuse.
@@ -425,10 +501,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         resultView.string = ""
         guard !currentSource.isEmpty else { stateLabel.stringValue = "请先在其他应用选中英文，再用力点按。"; return }
         guard currentSource.count <= 20_000 else { stateLabel.stringValue = "原文超过 20,000 个字符，请缩短选区。"; return }
-        if let copiedSource, !copiedSource.isCurrent {
-            stateLabel.stringValue = "请返回原浏览器重新选中文字并重按。"
-            return
-        }
+        popup.requiresAnalysisConfirmation = false
         let settings: AIConfiguration
         do { settings = try configuration() }
         catch { stateLabel.stringValue = "原文已读取；\(error.localizedDescription)"; return }
@@ -450,7 +523,6 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
                     throw AppError.message("请先在 AI 设置中保存密钥。")
                 }
                 guard self.generation == requestGeneration, !Task.isCancelled else { return }
-                guard self.copiedSource?.isCurrent != false else { throw AppError.message("原浏览器已不是前台，请返回后重新选文并重按。") }
                 self.stateLabel.stringValue = "正在翻译并整理表达…可点击取消。"
                 self.popup.refresh()
                 let requestStarted = ProcessInfo.processInfo.systemUptime
@@ -474,6 +546,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func invalidate() {
+        monitor.cancelPendingTrigger()
         generation += 1
         copyPermit?.cancel()
         copyPermit = nil
@@ -533,7 +606,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func refreshDiagnostics() {
         onboardingState.stringValue = "当前进程状态 · 辅助功能：\(AXIsProcessTrusted() ? "已授权" : "未授权")；输入监听访问：\(monitor.hasListenAccess ? "已允许" : "未允许")\n监听创建：\(monitor.isCreated ? "成功" : "未创建")；监听启用：\(monitor.isEnabled ? "是" : "否")。授权后可点击“重新启动监听”再核对。"
-        diagnosticsState.stringValue = "辅助功能：\(AXIsProcessTrusted() ? "已授权" : "未授权")\n当前进程输入监听访问：\(monitor.hasListenAccess ? "已允许" : "未允许")；监听创建：\(monitor.isCreated ? "成功" : "未创建")；启用：\(monitor.isEnabled ? "是" : "否")\n第 \(monitor.startCount) 次启动（计数已重置） · 原始手势：\(monitor.rawGestures)  压力：\(monitor.pressureEvents)  stage 2：\(monitor.stage2Events)  触发：\(monitor.triggers)\n停用次数：超时 \(monitor.timeoutDisables) / 系统或用户 \(monitor.userInputDisables)\n最近停用：\(monitor.lastDisabledReason)\n最近选区：\(lastCapture)"
+        diagnosticsState.stringValue = "\(selectionHotKey.status)\n辅助功能：\(AXIsProcessTrusted() ? "已授权" : "未授权")\n当前进程输入监听访问：\(monitor.hasListenAccess ? "已允许" : "未允许")；监听创建：\(monitor.isCreated ? "成功" : "未创建")；启用：\(monitor.isEnabled ? "是" : "否")\n第 \(monitor.startCount) 次启动（计数已重置） · 原始手势：\(monitor.rawGestures)  压力：\(monitor.pressureEvents)  stage 2：\(monitor.stage2Events)  触发：\(monitor.triggers)\n停用次数：超时 \(monitor.timeoutDisables) / 系统或用户 \(monitor.userInputDisables)\n最近停用：\(monitor.lastDisabledReason)\n最近选区：\(lastCapture)"
     }
     @objc private func authorize() {
         _ = AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary)

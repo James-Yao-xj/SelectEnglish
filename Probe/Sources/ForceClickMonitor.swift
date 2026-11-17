@@ -2,11 +2,12 @@ import AppKit
 
 /// Observe the verified passive session stream. All callbacks run on the main run loop.
 final class ForceClickMonitor {
-    var onTrigger: ((NSRunningApplication, CGPoint) -> Void)?
+    var onTrigger: ((NSRunningApplication, CGPoint, TimeInterval) -> Void)?
     var onStatusChange: (() -> Void)?
     private var tap: CFMachPort?
     private var source: CFRunLoopSource?
     private var gate = GestureGate()
+    private var deferredTrigger = DeferredCaptureTriggerState()
     private(set) var rawGestures = 0
     private(set) var pressureEvents = 0
     private(set) var stage2Events = 0
@@ -50,11 +51,20 @@ final class ForceClickMonitor {
     }
 
     func stop() {
+        cancelPendingTrigger()
         if let source { CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes) }
         if let tap { CFMachPortInvalidate(tap) }
         source = nil
         tap = nil
         gate = GestureGate()
+    }
+
+    /// Cancel a pressure handoff that has not started its controller capture.
+    func cancelPendingTrigger() { deferredTrigger.cancel(through: ProcessInfo.processInfo.systemUptime) }
+
+    /// Receive existing local/global mouse monitors even while the result panel is hidden.
+    func observeMouseDown(timestamp: TimeInterval) {
+        deferredTrigger.observeMouseDown(timestamp: timestamp)
     }
 
     /// Fix the source app at stage 2. Never perform AX or network work in this callback.
@@ -73,6 +83,9 @@ final class ForceClickMonitor {
             DispatchQueue.main.async { [weak self] in self?.onStatusChange?() }
             return
         }
+        if type == .leftMouseDown {
+            observeMouseDown(timestamp: TimeInterval(event.timestamp) / 1_000_000_000)
+        }
         if type == .leftMouseUp { _ = gate.receive(stage: 0); return }
         if type.rawValue == UInt32(NSEvent.EventType.gesture.rawValue) { rawGestures += 1 }
         guard type.rawValue == UInt32(NSEvent.EventType.gesture.rawValue)
@@ -84,7 +97,11 @@ final class ForceClickMonitor {
               app.processIdentifier != ProcessInfo.processInfo.processIdentifier else { return }
         triggers += 1
         let point = NSEvent.mouseLocation
-        DispatchQueue.main.async { [weak self] in self?.onTrigger?(app, point) }
+        guard let token = deferredTrigger.schedule(timestamp: cocoa.timestamp) else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let timestamp = self.deferredTrigger.take(token) else { return }
+            self.onTrigger?(app, point, timestamp)
+        }
     }
 
     deinit { stop() }

@@ -5,13 +5,14 @@ struct BrowserCopySource: Sendable {
     let pid: pid_t
     let launchDate: Date?
     let bundleID: String
+    var window: CapturedSelectionWindow? = nil
     static let supportedBrowsers: Set<String> = ["com.google.Chrome", "com.apple.Safari", "org.chromium.Chromium", "com.microsoft.edgemac", "com.brave.Browser", "org.mozilla.firefox"]
     func matches(pid: pid_t?, launchDate: Date?, bundleID: String?) -> Bool {
         Self.supportedBrowsers.contains(self.bundleID) && self.pid == pid && self.launchDate == launchDate && self.bundleID == bundleID
     }
     var isCurrent: Bool {
         guard let app = NSWorkspace.shared.frontmostApplication, !app.isTerminated else { return false }
-        return matches(pid: app.processIdentifier, launchDate: app.launchDate, bundleID: app.bundleIdentifier)
+        return matches(pid: app.processIdentifier, launchDate: app.launchDate, bundleID: app.bundleIdentifier) && window?.isCurrent != false
     }
 }
 

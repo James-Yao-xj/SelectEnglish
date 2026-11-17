@@ -27,6 +27,8 @@ struct SelectionExtraction<Access: SelectionAccess> {
     struct Result {
         let text: String
         let role: String
+        /// A scoped node can expose only part of a PDF selection. Confirm it before analysis.
+        let requiresConfirmation: Bool
     }
 
     func read(focused: Access.Node) -> Result? {
@@ -53,10 +55,11 @@ struct SelectionExtraction<Access: SelectionAccess> {
             }
             return nil
         }
-        func result(_ text: String, node: Access.Node) -> Result {
-            Result(text: text, role: call({ access.text(node, attribute: "AXRole") }) ?? "未知")
+        func result(_ text: String, node: Access.Node, requiresConfirmation: Bool) -> Result {
+            Result(text: text, role: call({ access.text(node, attribute: "AXRole") }) ?? "未知",
+                   requiresConfirmation: requiresConfirmation)
         }
-        if let text = selected(focused) { return result(text, node: focused) }
+        if let text = selected(focused) { return result(text, node: focused, requiresConfirmation: false) }
 
         // Only a proven PDF root may open descendant traversal. Never search a whole window.
         var ancestor: Access.Node? = focused
@@ -86,7 +89,10 @@ struct SelectionExtraction<Access: SelectionAccess> {
             let role = call({ access.text(node, attribute: "AXRole") })
             if ["AXWindow", "AXApplication", "AXToolbar", "AXTextField", "AXTextArea", "AXComboBox",
                 "AXSecureTextField", "AXButton", "AXPopUpButton", "AXSlider"].contains(role ?? "") { continue }
-            if node != focused, let text = selected(node) { return result(text, node: node) }
+            if node != focused, let text = selected(node) {
+                // Bounded discovery cannot prove that a descendant contains the full selection.
+                return result(text, node: node, requiresConfirmation: true)
+            }
             guard depth < maximumDepth else { continue }
             let remaining = maximumNodes - visited.count - (queue.count - index)
             guard remaining > 0 else { continue }

@@ -7,6 +7,15 @@ enum SelectionReader {
         let role: String
         let text: String
         let message: String
+        /// Scoped PDF candidates must not enter automatic analysis or cached-result reuse.
+        let requiresConfirmation: Bool
+
+        init(role: String, text: String, message: String, requiresConfirmation: Bool = false) {
+            self.role = role
+            self.text = text
+            self.message = message
+            self.requiresConfirmation = requiresConfirmation
+        }
     }
 
     /// Read only the original process through bounded public selection APIs.
@@ -25,7 +34,11 @@ enum SelectionReader {
         guard let result = extractor.read(focused: focused), !app.isTerminated else {
             return Result(role: access.text(focused, attribute: "AXRole") ?? "未知", text: "", message: "没有读取到有效选区；目标 PDF 可能未通过辅助功能暴露选中文字。" + access.failureDescription)
         }
-        return Result(role: result.role, text: result.text, message: "已读取 \(result.text.count) 个字符，请核对是否为完整选区。")
+        let message = result.requiresConfirmation
+            ? "已读取 PDF 候选文字，可能只包含部分选区；核对完整内容后才能分析。"
+            : "已读取 \(result.text.count) 个字符，请核对是否为完整选区。"
+        return Result(role: result.role, text: result.text, message: message,
+                      requiresConfirmation: result.requiresConfirmation)
     }
 }
 

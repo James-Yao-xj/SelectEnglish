@@ -28,11 +28,13 @@ func read(_ access: FakeAccess) -> SelectionExtraction<FakeAccess>.Result? {
 let direct = FakeAccess()
 direct.texts[1] = ["AXSelectedText": "Selected", "AXRole": "AXTextArea"]
 check(read(direct)?.text == "Selected", "focused text still works")
+check(read(direct)?.requiresConfirmation == false, "focused selection keeps its existing automatic-analysis policy")
 check(!direct.calls.contains("1:children"), "no traversal after direct success")
 let ranged = FakeAccess()
 ranged.ranges[1] = NSRange(location: 9, length: 4)
 ranged.rangeStrings[1] = "Only"
 check(read(ranged)?.text == "Only", "same element selected range conversion")
+check(read(ranged)?.requiresConfirmation == false, "focused range selection keeps its existing policy")
 ranged.rangeStrings[1] = "Whole document instead"
 check(read(ranged) == nil, "range conversion cannot return beyond selected length")
 ranged.rangeStrings[1] = "Only"
@@ -50,6 +52,7 @@ marker.markers[1] = 10
 marker.lengths[10] = 5
 marker.markerStrings[10] = "Hello"
 check(read(marker)?.text == "Hello", "selected marker range conversion")
+check(read(marker)?.requiresConfirmation == false, "focused marker selection keeps its existing policy")
 marker.markerStrings[10] = "Wrong longer text"
 check(read(marker) == nil, "marker conversion cannot return beyond selected length")
 marker.markerStrings[10] = "Hello"
@@ -61,6 +64,17 @@ pdf.texts[1] = ["AXURL": "chrome-extension://mhjfbmdgcfjbbpaeojofohoefgiehjai/in
 pdf.descendants = [1: [2], 2: [3], 3: [1]]
 pdf.texts[3] = ["AXSelectedText": "PDF selection"]
 check(read(pdf)?.text == "PDF selection", "focused PDF iframe descendants reached")
+check(read(pdf)?.requiresConfirmation == true, "scoped PDF discovery always needs explicit confirmation")
+let fragmented = FakeAccess()
+fragmented.texts[1] = ["AXRole": "AXWebArea", "AXURL": "https://example.invalid/sample.pdf"]
+fragmented.descendants[1] = [2, 3]
+fragmented.texts[2] = ["AXRole": "AXStaticText", "AXSelectedText": "First fragment"]
+fragmented.texts[3] = ["AXRole": "AXStaticText", "AXSelectedText": "Second fragment"]
+let fragment = read(fragmented)
+check(fragment?.text == "First fragment" && fragment?.requiresConfirmation == true,
+      "the first descendant fragment is only an unverified preview, never a complete automatic capture")
+let limitedFragment = SelectionExtraction(access: fragmented, now: { 0 }, canContinue: { true }, maximumNodes: 2).read(focused: 1)
+check(limitedFragment?.requiresConfirmation == true, "truncated descendant discovery cannot imply a complete selection")
 let unrelated = FakeAccess()
 unrelated.texts[1] = ["AXURL": "https://example.org/page"]
 unrelated.descendants = [1: [2]]
