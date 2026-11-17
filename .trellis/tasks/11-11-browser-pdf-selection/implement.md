@@ -37,3 +37,6 @@ The user's explicit ten-hour autonomous instruction supersedes all prior pending
 
 ## Cancelled-read latency checkpoint (2026-11-17)
 Implemented shared SelectionCapturePermit for the AX worker and copy continuation; invalidation now stops obsolete queued/active AX operations cooperatively instead of only suppressing publication. Existing per-call timeout still bounds an issued call; no forced-interrupt claim. Version0.11.0 build18. Focused deterministic cancellation/selection/copy tests and unsigned candidate compile passed; no app install, signing, runtime permission or user-data access in this change.
+
+## Credential partial-write checkpoint (2026-11-17)
+Build19 adds fail-closed origin binding for reported new-key write failures. Isolated defaults/fake-writer tests cover mutation-then-throw, failure before mutation, successful binding, and same-origin failure. No real defaults/credentials or new storage format; existing configuration guard blocks unbound credentials before any client call. Focused Services and unsigned full candidate checks passed. No atomicity/crash guarantee claimed.

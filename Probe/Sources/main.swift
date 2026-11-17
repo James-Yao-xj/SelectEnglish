@@ -359,8 +359,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate, NS
                 throw AppError.message("更换 AI 服务时必须输入该服务的新密钥，不能复用旧服务密钥。")
             }
             if !newKey.isEmpty {
-                try KeyStore.save(newKey)
-                UserDefaults.standard.set(configuration.origin, forKey: "ai.keyOrigin")
+                try KeyStore.saveBound(newKey, origin: configuration.origin)
             }
             UserDefaults.standard.set(configuration.endpoint, forKey: "ai.endpoint")
             UserDefaults.standard.set(configuration.model, forKey: "ai.model")

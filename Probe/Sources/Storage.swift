@@ -37,6 +37,19 @@ enum KeyStore {
         return key
     }
 
+    /// Replace a nonempty key from a validated configuration, then bind its service.
+    ///
+    /// Clear the old binding before any write can change credential bytes. A reported
+    /// write failure leaves the key unbound, even if the writer already replaced it.
+    /// This is not an atomic transaction across the file and UserDefaults, and it
+    /// does not provide a crash or power-loss guarantee. Tests inject both stores.
+    static func saveBound(_ key: String, origin: String?, defaults: UserDefaults = .standard,
+                          writer: (String) throws -> Void = { try save($0) }) throws {
+        defaults.removeObject(forKey: "ai.keyOrigin")
+        try writer(key)
+        defaults.set(origin, forKey: "ai.keyOrigin")
+    }
+
     /// Atomically replace the key inside a mode-0700 directory, or delete it for an empty save.
     static func save(_ key: String, file: URL? = nil) throws {
         let destination = file ?? applicationFile
