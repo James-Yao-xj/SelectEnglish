@@ -78,6 +78,7 @@ final class ForceClickMonitor {
             return
         }
         if type == .tapDisabledByUserInput {
+            cancelPendingTrigger()
             userInputDisables += 1
             lastDisabledReason = "系统或用户停用；未自动恢复，请检查权限并手动重新启动监听"
             DispatchQueue.main.async { [weak self] in self?.onStatusChange?() }

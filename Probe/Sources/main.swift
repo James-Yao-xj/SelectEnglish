@@ -173,14 +173,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate, NS
     private func makeResultWindow() {
         popup = ResultPopup()
         popup.onMouseDown = { [weak self] timestamp in self?.monitor.observeMouseDown(timestamp: timestamp) }
-        popup.onDismiss = { [weak self] in
-            guard let self else { return }
-            if self.analysisTask != nil || self.popup.hasPendingCapture {
-                self.stateLabel.stringValue = "已取消，可点击重试。"
-                self.popup.refresh()
-            }
-            self.invalidate()
-        }
+        popup.onDismiss = { [weak self] in self?.invalidate() }
         popup.onRetry = { [weak self] in self?.analyze(bypassReuse: true) }
         popup.onCancel = { [weak self] in self?.cancel() }
         popup.onFavorite = { [weak self] in self?.saveFavorite() }
@@ -549,6 +542,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate, NS
     }
 
     private func invalidate() {
+        let hadPendingWork = analysisTask != nil || copyFallbackTask != nil || popup?.hasPendingCapture == true
         monitor.cancelPendingTrigger()
         generation += 1
         capturePermit?.cancel()
@@ -558,6 +552,10 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate, NS
         popup?.invalidateCapture()
         analysisTask?.cancel()
         analysisTask = nil
+        if hadPendingWork {
+            stateLabel.stringValue = "已取消，可点击重试。"
+            popup.refresh()
+        }
     }
 
     @objc private func cancel() { invalidate(); stateLabel.stringValue = "已取消，可点击重试。"; popup.refresh() }
