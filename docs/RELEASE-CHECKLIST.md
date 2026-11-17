@@ -82,3 +82,12 @@
 - 12组离线回归、Universal与解压后签名/资源/校验和验证通过；[PR CI44107095299](https://github.com/James-Yao-xj/SelectEnglish/actions/runs/44107095299)通过。
 - 本机已安装，旧19副本可从废纸篓恢复；已收起本次诊断窗口。当前取词权限仍待本人认证，未替代正式签名、公证和另一台 Mac 验收。
 - 正式模式缺少账号材料时实际退出2，保存preflight失败清单且不宣称产生新包。没有提交 Apple 公证请求。
+
+
+## v0.11.0 / build21 后续候选记录
+
+- 干净源提交`e117d2aa283ec959974594aae772e75f3af8cd13`；ZIP SHA256：`da92b7fe7e23437b3bdec4f345c48429b2ae6331d8de7c876e627f6794f8881a`。
+- 12组离线回归、Universal与解压后签名/资源/部署目标/校验和验证通过；[PR CI44118802662](https://github.com/James-Yao-xj/SelectEnglish/actions/runs/44118802662)两种宿主通过。
+- 本机已安装原样签名的候选；旧20保留在可恢复废纸篓。原生菜单显示SelectEnglish，⌃⌥⌘T已注册；这不证明快捷键交付、实际选区读取或物理重按通过。当前进程取词权限仍待本人系统认证。
+- 已准备未公开草稿发行，下载后的ZIP、SHA256、构建清单与本地候选一致；未启动下载副本，不作为Gatekeeper或干净设备证据。公开下载入口仍为v0.10.0-beta.1。
+- 额外严格并发诊断可完成，但产生299条警告，不代表Swift6严格模式已通过；范围与限制见[并发诊断记录](../.trellis/tasks/11-11-browser-pdf-selection/research/concurrency-audit.md)。
