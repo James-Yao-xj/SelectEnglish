@@ -74,3 +74,11 @@
 - 12组离线检查、双架构编译及完整 beta 包验证通过，包含取消过期排队 AX 读取的确定性回归与实际重定向 delegate 策略测试。
 - [PR CI44099695740](https://github.com/James-Yao-xj/SelectEnglish/actions/runs/44099695740) 已通过。仍为临时签名，本机尚未替换0.10.3，原生 PDF 和新入口仍未完成实机验收。
 - 后续源码或发布脚本修改需要新的验证记录；此条仅描述上述提交，不随分支更新自动延伸。
+
+
+## v0.11.0 / build20 后续候选记录
+
+- 干净源提交08affaf；本地 ZIP SHA256：`c48c33dd1b3aafcbe6b4b2e8a449f6f2fdf9a34141d7c62b08da4a99122cb775`。
+- 12组离线回归、Universal与解压后签名/资源/校验和验证通过；[PR CI44107095299](https://github.com/James-Yao-xj/SelectEnglish/actions/runs/44107095299)通过。
+- 本机已安装，旧19副本可从废纸篓恢复；已收起本次诊断窗口。当前取词权限仍待本人认证，未替代正式签名、公证和另一台 Mac 验收。
+- 正式模式缺少账号材料时实际退出2，保存preflight失败清单且不宣称产生新包。没有提交 Apple 公证请求。
