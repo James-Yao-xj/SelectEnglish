@@ -2,6 +2,8 @@
 
 提交前先阅读 `AGENTS.md`、`.trellis/workflow.md` 和 `.trellis/spec/macos/index.md`。请以一个明确问题为范围，附可复现步骤和相关验证。
 
+普通问题可按[故障报告模板](.github/ISSUE_TEMPLATE/bug_report.yml)准备版本、环境和脱敏复现步骤；敏感问题请使用[安全反馈说明](SECURITY.md)中的渠道。
+
 ## 环境和构建
 
 需要 macOS 与 Xcode Command Line Tools。双架构目标为 arm64、x86_64，最低部署版本为 macOS 13.0；编译成功不代表在最低版本或 Intel 触控板上完成实际验证。

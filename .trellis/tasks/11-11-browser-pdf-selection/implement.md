@@ -1,4 +1,11 @@
 # Plan
+
+## Latest checkpoint — 2026-11-17 16:49 UTC
+
+The dated sections below preserve the debugging history; they are not all current installation state. Canonical app is now0.11.0/build21, packaged from clean e117d2a without resigning after packaging. Current branch includes later documentation only. PR1 is draft/unmerged, and v0.11.0-beta.1 is an unpublished draft candidate; public download remains v0.10.0-beta.1. Current process still lacks AX/input access; human-only authentication and positive PDF/physical tests remain deferred without questions during the autonomous window. See autonomous-2026-11-17.md and docs/RELEASE-CHECKLIST.md for exact source/hash/native limits.
+
+Remaining window work: nonsecret background process observation through23:22:20UTC, a concise public bug-report form for reproducible sanitized reports, and final state/evidence reconciliation. No broader permissions, actor migration, production churn, main merge or public release is planned merely to fill the remaining time.
+
 - [x] Investigate browser PDF AX API shape and implement narrowly scoped capture support.
 - [x] Regression tests and full universal build; independent review.
 - [ ] Public synthetic browser PDF native selection QA when feasible; document actual limits.
