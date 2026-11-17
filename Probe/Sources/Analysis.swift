@@ -50,14 +50,17 @@ struct Analysis: Codable, Equatable {
             func normalized(_ word: String) -> String { word.trimmingCharacters(in: boundaries).lowercased() }
             let selectedWord = normalized(source)
             let scalars = Array(selectedWord.unicodeScalars)
-            let lettersAndMarks = CharacterSet.letters.union(.nonBaseCharacters)
+            let components = CharacterSet.letters.union(.nonBaseCharacters).union(.decimalDigits)
             let connectors = CharacterSet(charactersIn: "-'’‐‑")
-            // Commas and slashes can separate a fragment's words even without spaces.
-            let isSingleWord = scalars.contains(where: { CharacterSet.letters.contains($0) })
-                && scalars.enumerated().allSatisfy { index, scalar in
-                    lettersAndMarks.contains(scalar) || (connectors.contains(scalar) && index > 0
-                        && index + 1 < scalars.count && lettersAndMarks.contains(scalars[index - 1])
-                        && lettersAndMarks.contains(scalars[index + 1]))
+            // C+ and C++ are single terms. Keep their suffix in the exact source comparison.
+            let trailingPluses = scalars.reversed().prefix(while: { $0 == "+" }).count
+            let core = (1...2).contains(trailingPluses) ? Array(scalars.dropLast(trailingPluses)) : scalars
+            // Commas and slashes still separate fragments; numeric-only input is not a word.
+            let isSingleWord = core.contains(where: { CharacterSet.letters.contains($0) })
+                && core.enumerated().allSatisfy { index, scalar in
+                    components.contains(scalar) || (connectors.contains(scalar) && index > 0
+                        && index + 1 < core.count && components.contains(core[index - 1])
+                        && components.contains(core[index + 1]))
                 }
             if isSingleWord && !vocabulary.contains(where: { normalized($0.word) == selectedWord }) {
                 throw AppError.message("单词分析未返回所选单词的词性和释义，请重试。")

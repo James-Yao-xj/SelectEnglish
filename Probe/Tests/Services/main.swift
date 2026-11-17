@@ -314,6 +314,16 @@ func check(_ condition: @autoclosure () -> Bool, _ message: String) throws {
         _ = try noWords.validated(source: "Hello,world!")
         do { _ = try noWords.validated(source: "Happy"); throw AppError.message("accepted missing single word") }
         catch { try check(error.localizedDescription != "accepted missing single word", "single-word input requires its POS/meaning") }
+        for term in ["3D", "COVID-19", "C+", "C++", ".NET", "C#"] {
+            _ = try vocabularyResult(term).validated(source: term)
+            for invalid in [noWords, vocabularyResult("banana")] {
+                do { _ = try invalid.validated(source: term); throw AppError.message("accepted missing technical term") }
+                catch { try check(error.localizedDescription != "accepted missing technical term", "isolated technical term requires its literal vocabulary entry") }
+            }
+        }
+        _ = try noWords.validated(source: "123")
+        _ = try noWords.validated(source: "They use 3D models, COVID-19 data and C++.")
+        print("PASS: isolated alphanumeric and plus-suffix terms require exact vocabulary; fragments and sentences may stay empty")
         for invalid in [
             Analysis(translation: "旧译文", expressions: []),
             Analysis(translation: "译文", expressions: [], vocabulary: [], sentenceExplanation: " "),
