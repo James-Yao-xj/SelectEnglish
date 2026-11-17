@@ -39,8 +39,11 @@ struct Analysis: Codable, Equatable {
             throw AppError.message("AI 返回的生词、整句解释或固定表达字段不完整，请重试。")
         }
         if let source {
-            guard vocabulary.allSatisfy({ Self.containsSourceForm($0.word, in: source) }) else {
-                throw AppError.message("AI 返回的生词与原文词形不符，请重试。")
+            if !vocabulary.isEmpty {
+                let compactSource = Self.compactWhitespace(source)
+                guard vocabulary.allSatisfy({ Self.containsSourceForm($0.word, in: compactSource) }) else {
+                    throw AppError.message("AI 返回的生词与原文词形不符，请重试。")
+                }
             }
             let boundaries = CharacterSet.whitespacesAndNewlines.union(.punctuationCharacters)
             // Trim only boundaries. Internal punctuation and inflections stay intact.
@@ -63,14 +66,15 @@ struct Analysis: Codable, Equatable {
         return self
     }
 
+    private static func compactWhitespace(_ text: String) -> String {
+        text.split(whereSeparator: { $0.isWhitespace }).joined(separator: " ")
+    }
+
     /// Match original word forms without treating parts of compounds or technical names as words.
     ///
-    /// Whitespace runs may differ in phrases. Case may differ; connectors and inflections may not.
+    /// Source whitespace must already be compact. Word whitespace and case may differ;
+    /// connectors and inflections may not.
     private static func containsSourceForm(_ word: String, in source: String) -> Bool {
-        func compactWhitespace(_ text: String) -> String {
-            text.split(whereSeparator: { $0.isWhitespace }).joined(separator: " ")
-        }
-        let source = compactWhitespace(source)
         let word = compactWhitespace(word)
         let core = CharacterSet.alphanumerics.union(.nonBaseCharacters)
         let suffixes = CharacterSet(charactersIn: "+#_")
