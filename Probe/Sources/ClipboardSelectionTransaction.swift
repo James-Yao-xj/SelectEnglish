@@ -33,28 +33,36 @@ enum ClipboardSelectionError: Error, LocalizedError {
     ///
     /// Args:
     ///   isCurrent: Checks the original source and controller generation.
+    ///   validateSource: Runs slow source validation away from the main actor.
+    ///   validateSource: Awaits worker-side window validation; lightweight guards run again after it.
     ///   performCopy: Sends Copy to the source. Check source identity before its side effect.
     /// Returns:
-    ///   Trimmed fresh text, limited to 20,000 characters.
+    ///   Unchanged fresh text, limited to 20,000 characters.
     /// Throws:
     ///   Backup, copy, timeout, cancellation, or restoration errors.
     static func run(isCurrent: @escaping () -> Bool,
+                    validateSource: @escaping () async throws -> Void = {},
                     performCopy: @escaping () async throws -> Void) async throws -> String {
-        try await run(pasteboard: SystemSelectionPasteboard(), isCurrent: isCurrent, performCopy: performCopy)
+        try await run(pasteboard: SystemSelectionPasteboard(), isCurrent: isCurrent, validateSource: validateSource, performCopy: performCopy)
     }
 
     /// Inject clipboard and waiting operations to test without user data or real delays.
     static func run(pasteboard: any SelectionPasteboard, attempts: Int = 30,
                     wait: () async throws -> Void = { try await Task.sleep(nanoseconds: 20_000_000) },
                     isCurrent: @escaping () -> Bool,
+                    validateSource: @escaping () async throws -> Void = {},
                     performCopy: @escaping () async throws -> Void) async throws -> String {
         func checkCurrent() throws {
             try Task.checkCancellation()
             guard isCurrent() else { throw CancellationError() }
         }
         try checkCurrent()
+        try await validateSource()
+        try checkCurrent()
         let originalCount = pasteboard.changeCount
         let backup = try pasteboard.snapshot()
+        try checkCurrent()
+        try await validateSource()
         try checkCurrent()
         guard pasteboard.changeCount == originalCount else { throw ClipboardSelectionError.changed }
         // Empty the clipboard so a failed Copy cannot return stale text.
@@ -76,9 +84,12 @@ enum ClipboardSelectionError: Error, LocalizedError {
                 if count != emptyCount {
                     // Treat the first post-command write as Copy. No OS API can prove its writer.
                     ownedCount = count
-                    let text = pasteboard.string()?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                    try await validateSource()
+                    try checkCurrent()
                     guard pasteboard.changeCount == count else { throw ClipboardSelectionError.changed }
-                    guard !text.isEmpty else { throw ClipboardSelectionError.noText }
+                    let text = pasteboard.string() ?? ""
+                    guard pasteboard.changeCount == count else { throw ClipboardSelectionError.changed }
+                    guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw ClipboardSelectionError.noText }
                     guard text.count <= 20_000 else { throw ClipboardSelectionError.oversized }
                     try checkCurrent()
                     guard pasteboard.changeCount == ownedCount else { throw ClipboardSelectionError.changed }

@@ -10,9 +10,12 @@ struct BrowserCopySource: Sendable {
     func matches(pid: pid_t?, launchDate: Date?, bundleID: String?) -> Bool {
         Self.supportedBrowsers.contains(self.bundleID) && self.pid == pid && self.launchDate == launchDate && self.bundleID == bundleID
     }
-    var isCurrent: Bool {
+    func validateWindow(permit: SelectionCapturePermit) async throws {
+        guard await window?.isCurrentAsync(permit: permit) != false else { throw CancellationError() }
+    }
+    var isForegroundProcess: Bool {
         guard let app = NSWorkspace.shared.frontmostApplication, !app.isTerminated else { return false }
-        return matches(pid: app.processIdentifier, launchDate: app.launchDate, bundleID: app.bundleIdentifier) && window?.isCurrent != false
+        return matches(pid: app.processIdentifier, launchDate: app.launchDate, bundleID: app.bundleIdentifier)
     }
 }
 
@@ -70,12 +73,12 @@ final class BrowserCopyFallback: @unchecked Sendable {
     @MainActor static func prepare(source: BrowserCopySource, permit: SelectionCapturePermit) async throws -> BrowserCopyFallback {
         let releaseDeadline = ProcessInfo.processInfo.systemUptime + 0.6
         while NSEvent.pressedMouseButtons & 1 != 0 {
-            guard permit.isValid, source.isCurrent else { throw CancellationError() }
+            guard permit.isValid, source.isForegroundProcess else { throw CancellationError() }
             guard ProcessInfo.processInfo.systemUptime < releaseDeadline else { throw AppError.message("请松开触控板后重新重按。") }
             try await Task.sleep(nanoseconds: 20_000_000)
         }
         try Task.checkCancellation()
-        guard permit.isValid, source.isCurrent else { throw CancellationError() }
+        guard permit.isValid, source.isForegroundProcess else { throw CancellationError() }
         return BrowserCopyFallback(source: source, permit: permit)
     }
 
@@ -85,7 +88,8 @@ final class BrowserCopyFallback: @unchecked Sendable {
             Self.queue.async {
                 do {
                     let shortcut = BrowserCopyShortcut(poster: NativeBrowserCopyEventPoster(), isCurrent: {
-                        self.permit.isValid && self.source.isCurrent
+                        self.permit.isValid && self.source.isForegroundProcess && self.source.window?.isCurrentOnWorker != false
+                            && self.permit.isValid && self.source.isForegroundProcess
                     })
                     try shortcut.perform(to: self.source.pid)
                     continuation.resume()

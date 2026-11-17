@@ -34,6 +34,7 @@ final class CapturedSelectionWindow: @unchecked Sendable {
         let element: AXUIElement
         static func == (lhs: Window, rhs: Window) -> Bool { CFEqual(lhs.element, rhs.element) }
     }
+    private static let worker = DispatchQueue(label: "com.selectenglish.window-validation")
     private let pid: pid_t
     private let identity: SelectionWindowIdentity<Window>
     private init(pid: pid_t, window: AXUIElement) {
@@ -52,7 +53,19 @@ final class CapturedSelectionWindow: @unchecked Sendable {
         guard let window = focusedWindow(pid: pid) else { return nil }
         return CapturedSelectionWindow(pid: pid, window: window)
     }
-    var isCurrent: Bool {
+    /// Validate AX window identity on the serial worker, never on the main actor.
+    func isCurrentAsync(permit: SelectionCapturePermit) async -> Bool {
+        guard permit.isValid else { return false }
+        return await withCheckedContinuation { continuation in
+            Self.worker.async {
+                guard permit.isValid else { continuation.resume(returning: false); return }
+                let current = self.isCurrentOnWorker
+                continuation.resume(returning: permit.isValid && current)
+            }
+        }
+    }
+    /// Call only on an AX worker. This operation can wait for the existing AX timeout.
+    var isCurrentOnWorker: Bool {
         identity.matches(current: Self.focusedWindow(pid: pid).map { Window(element: $0) })
     }
 }

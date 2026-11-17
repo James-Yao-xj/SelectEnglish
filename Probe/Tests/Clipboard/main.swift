@@ -36,10 +36,10 @@ import Foundation
         let original = [SelectionPasteboardItem(representations: ["public.utf8-plain-text": Data("stale secret".utf8), "custom.binary": Data([0, 255, 1])]), SelectionPasteboardItem(representations: ["public.rtf": Data([5, 6])])]
         func check(_ value: Bool, _ label: String) { precondition(value, label) }
         let board = FakePasteboard(original)
-        let text = try await ClipboardSelectionTransaction.run(pasteboard: board, wait: {}, isCurrent: { true }, performCopy: { board.copy(" fresh ") })
-        check(text == "fresh" && board.items == original, "fresh copy and all item/type bytes roundtrip")
+        let text = try await ClipboardSelectionTransaction.run(pasteboard: board, wait: {}, isCurrent: { true }, performCopy: { board.copy(" \n fresh \t") })
+        check(text == " \n fresh \t" && board.items == original, "fresh copy and all item/type bytes roundtrip")
 
-        for payload in ["", "  \n", String(repeating: "x", count: 20_001)] {
+        for payload in ["", "  \n", String(repeating: "x", count: 20_001), " " + String(repeating: "x", count: 20_000)] {
             let fake = FakePasteboard(original)
             do {
                 _ = try await ClipboardSelectionTransaction.run(pasteboard: fake, wait: {}, isCurrent: { true }, performCopy: { fake.copy(payload) })
@@ -47,6 +47,39 @@ import Foundation
             } catch {}
             check(fake.items == original, "failed copied text restores backup")
         }
+        let validationFailure = FakePasteboard(original)
+        var validations = 0
+        var copyRequested = false
+        do {
+            _ = try await ClipboardSelectionTransaction.run(pasteboard: validationFailure, isCurrent: { true }, validateSource: {
+                validations += 1
+                await Task.yield()
+                if validations == 2 { throw CancellationError() }
+            }, performCopy: { copyRequested = true })
+            preconditionFailure("window change after backup accepted")
+        } catch { check(error is CancellationError, "async source mismatch propagates cancellation") }
+        check(validations == 2 && validationFailure.clearCalls == 0 && !copyRequested, "source validation after backup fails before clipboard mutation")
+        let changedDuringValidation = FakePasteboard(original)
+        validations = 0
+        do {
+            _ = try await ClipboardSelectionTransaction.run(pasteboard: changedDuringValidation, isCurrent: { true }, validateSource: {
+                validations += 1
+                await Task.yield()
+                if validations == 3 { changedDuringValidation.copy("external newer copy") }
+            }, performCopy: { changedDuringValidation.copy("selected") })
+            preconditionFailure("concurrent copy during async validation accepted")
+        } catch {}
+        check(changedDuringValidation.string() == "external newer copy", "version is checked again after await; newer copy is never restored over")
+        let cancelledValidation = FakePasteboard(original)
+        var stillCurrent = true
+        do {
+            _ = try await ClipboardSelectionTransaction.run(pasteboard: cancelledValidation, isCurrent: { stillCurrent }, validateSource: {
+                await Task.yield()
+                stillCurrent = false
+            }, performCopy: { preconditionFailure("cancelled validation sent Copy") })
+            preconditionFailure("source cancellation after await accepted")
+        } catch {}
+        check(cancelledValidation.clearCalls == 0, "lightweight source is checked after asynchronous validation")
         let noWrite = FakePasteboard(original)
         do {
             _ = try await ClipboardSelectionTransaction.run(pasteboard: noWrite, attempts: 2, wait: {}, isCurrent: { true }, performCopy: {})

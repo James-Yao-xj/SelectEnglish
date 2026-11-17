@@ -409,8 +409,9 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate, NS
             guard permit.isValid else { return }
             let result = SelectionReader.read(pid: pid, launchDate: launchDate, permit: permit)
             guard permit.isValid else { return }
-            // Copy setup has its own 80 ms window check after the bounded AX read.
+            // Copy setup uses separate window requests, each limited to 80 ms, after AX.
             let window = result.text.isEmpty && automaticallyAnalyze ? CapturedSelectionWindow.capture(pid: pid) : nil
+            let windowIsCurrent = window?.isCurrentOnWorker != false
             guard permit.isValid else { return }
             let readSeconds = ProcessInfo.processInfo.systemUptime - captureStarted
             DispatchQueue.main.async {
@@ -418,15 +419,15 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate, NS
                 if automaticallyAnalyze {
                     let foreground = self.externalForegroundApplication()
                     guard SelectionCommandIdentity(pid: pid, launchDate: launchDate).matches(
-                        pid: foreground?.processIdentifier, launchDate: foreground?.launchDate), window?.isCurrent != false else {
+                        pid: foreground?.processIdentifier, launchDate: foreground?.launchDate), windowIsCurrent else {
                         self.invalidate()
                         self.stateLabel.stringValue = "来源已改变，已取消读取。请重新选择后翻译。"
                         return
                     }
                 }
                 let source = BrowserCopySource(pid: pid, launchDate: launchDate, bundleID: app.bundleIdentifier ?? "", window: window)
-                if result.text.isEmpty && automaticallyAnalyze && UserDefaults.standard.bool(forKey: "selection.browserCopyFallback")
-                    && source.isCurrent {
+                if result.text.isEmpty && automaticallyAnalyze && AXIsProcessTrusted() && UserDefaults.standard.bool(forKey: "selection.browserCopyFallback")
+                    && source.isForegroundProcess {
                     self.copyAfterFailedAX(source: source, result: result, name: name, generation: requestGeneration, readSeconds: readSeconds)
                     return
                 }
@@ -442,7 +443,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate, NS
         copyFallbackTask = Task { @MainActor [weak self] in
             guard let self else { return }
             defer {
-                if self.generation == requestGeneration && !source.isCurrent {
+                if self.generation == requestGeneration && !source.isForegroundProcess {
                     self.copyFallbackTask = nil
                     self.invalidate()
                     self.stateLabel.stringValue = "已取消，请返回原浏览器重新选文并重按。"
@@ -450,20 +451,22 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate, NS
             }
             do {
                 let action = try await BrowserCopyFallback.prepare(source: source, permit: permit)
-                guard self.generation == requestGeneration, permit.isValid, source.isCurrent, !Task.isCancelled else { return }
+                guard self.generation == requestGeneration, permit.isValid, source.isForegroundProcess, !Task.isCancelled else { return }
                 let text = try await ClipboardSelectionTransaction.run(isCurrent: {
-                    self.generation == requestGeneration && permit.isValid && source.isCurrent
-                }, performCopy: { try await action.performCopy() })
-                guard self.generation == requestGeneration, permit.isValid, source.isCurrent, !Task.isCancelled else { return }
+                    self.generation == requestGeneration && permit.isValid && source.isForegroundProcess
+                }, validateSource: { try await source.validateWindow(permit: permit) }, performCopy: { try await action.performCopy() })
+                guard self.generation == requestGeneration, permit.isValid, source.isForegroundProcess, !Task.isCancelled else { return }
                 self.copyFallbackTask = nil
                 self.finishCapture(SelectionReader.Result(role: "浏览器复制", text: text, message: "已通过浏览器复制读取选区。"), name: name,
                     generation: requestGeneration, readSeconds: readSeconds, automaticallyAnalyze: true, origin: .clipboard)
             } catch {
                 guard self.generation == requestGeneration, !Task.isCancelled else { return }
                 self.copyFallbackTask = nil
-                guard source.isCurrent else { self.invalidate(); return }
+                guard source.isForegroundProcess else { self.invalidate(); return }
                 self.finishCapture(result, name: name, generation: requestGeneration, readSeconds: readSeconds,
-                    automaticallyAnalyze: false, copyFailure: "浏览器复制取词未完成：" + error.localizedDescription)
+                    automaticallyAnalyze: false, copyFailure: error is CancellationError
+                        ? "来源或选区已改变，已取消复制。请重新选中后按 ⌃⌥⌘T。"
+                        : "浏览器复制取词未完成：" + error.localizedDescription)
             }
         }
     }
