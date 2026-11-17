@@ -29,3 +29,7 @@ The user explicitly authorized ten hours of autonomous work without questions.
 - 13:22 UTC: started goal and delegated design, correctness, and documentation audits.
 - 13:30 UTC: approved menu/hotkey, clipboard preview, timestamp fix, and release-evidence changes. Root owns native QA; agents own disjoint source/docs scopes.
 - 13:32 UTC: native Chrome testing was interrupted by foreground changes and a CUA timeout. No selection or translation success claimed. Deferred native QA until candidate is frozen; continued source review.
+
+- 13:50 UTC: committed and pushed the first reviewed batch through4f6bf85. Clean-source build17 passed11 groups and full beta verification, SHA2563431c6e30ca925a627ccdbe94b4b3849df4b852f74dd38892ce6af425dc17995. Both CI runners passed run44096819648; nonsecret evidence artifacts verified present.
+- 14:02 UTC: opened draft PR1 through existing CLI authorization after the connector returned403. No merge, stable release, or installer replacement. Added direct delegate-policy regression and measured source-validation CPU; isolated hoist saves~5.55ms near20k characters, not an explanation for seconds of network delay.
+- 14:05 UTC: native inventory still timed out after a CUA kernel reset. Continue independent work; no lock-screen bypass or permission changes. Build18 cancels obsolete serial AX jobs with a shared permit; deterministic queue tests and independent review passed. The next full package will supersede the build17 local candidate.
