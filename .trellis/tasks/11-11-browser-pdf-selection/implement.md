@@ -23,3 +23,14 @@ LatestCUA read returned Macislocked/automaticunlockunavailable. Requested userma
 
 ## Selection-clearing root-cause checkpoint
 Afterunlock0.10.3physicalteststillnofreshcopy. ActualtargetthenconfirmednativeChromePDF; nohighlightaftertest. PrimaryChromiumOnLeftMouseDownclear+singleclickzero-range explainslossofpreselectedtextbeforestage2. Do notclaimrootfixedorcanvas-onlyproblem. UserpauseChromequestionwas superseded: latestrequest asksselecttextthenForceClickPDFtoolbarblankoutsidebody, avoidingpluginmousedown. AwaitingactualUIresult. Source/runtimeunchanged; no furtherrebuildbeforecontrolledevidence. Researchchrome-selection-order.md andspecupdatedfail-looplesson.
+
+
+## Autonomous window checkpoint (2026-11-17)
+The user's explicit ten-hour autonomous instruction supersedes all prior pending questions and handoffs in this chronological log. Do not ask for physical clicks, unlock, routine commits, or planning confirmation during this window. Start13:22:20UTC, deadline23:22:20UTC; see autonomous-2026-11-17.md.
+
+- Implemented v0.11.0/build17 menu and registered selection hotkey, clipboard preview confirmation, original-event deferred cancellation, source vocabulary correspondence, and nonsecret release evidence.
+- Independent code review passed. First integrated beta passed11 offline groups and universal/package verification, but was superseded by the additional scoped-PDF preview policy; do not install the earlier ZIP.
+- Scoped PDF candidates now carry possible-incompleteness confirmation through the native adapter, controller and action router. Focused tests and joint candidate compile passed; final clean source/package/CI checks still pending.
+- Source and49-commit history credential-pattern scan found zero matches; no runtime credential or notebook file read.
+- Native automation timed out repeatedly, including inventory. No successful candidate PDF capture or native hotkey/menu claim. Current installed app remains0.10.3/build16 at canonical path; no unattended permission/authentication changes attempted.
+- Next: commit reviewed changes in logical groups, build clean-source beta, push fix branch, verify both CI runners, and retry native QA only when computer-use connection recovers. Keep main and public stable releases unchanged.

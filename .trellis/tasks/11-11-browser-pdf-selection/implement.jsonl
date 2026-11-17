@@ -1,1 +1,3 @@
 {"file": ".trellis/spec/macos/index.md", "reason": "Capture boundaries, privacy, process identity and cancellation"}
+{"file": ".trellis/spec/macos/selection-workflows.md", "reason": "Explicit trigger, confirmation, cancellation and source-form contracts"}
+{"file": ".trellis/spec/macos/release-evidence.md", "reason": "Nonsecret evidence, failure cleanup and CI package verification"}
