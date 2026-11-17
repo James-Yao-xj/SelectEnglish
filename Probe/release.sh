@@ -40,10 +40,15 @@ if int(code) == 0 and archive_record.exists():
 PYRECEIPT
     then
         echo "Release evidence: $evidence_dir/manifest.json"
+        if [[ "$result" == 0 && "$phase" == verified ]]; then
+            echo "Verified artifact and manifest: $release_build/$artifact_name"
+        fi
     else
         echo "Could not finish the release manifest; attempt evidence remains in $evidence_dir" >&2
+        # Required evidence may fail a successful build, but must preserve an earlier failure.
+        if [[ "$result" == 0 ]]; then result=1; fi
     fi
-    # Evidence errors must not hide the release exit status or prevent stage cleanup.
+    # Evidence errors must not hide an earlier failure or prevent stage cleanup.
     if [[ -n "$release_stage" ]]; then
         rm -rf "$release_stage" || echo "Could not remove temporary release stage." >&2
     fi
@@ -156,4 +161,4 @@ archive, target = map(pathlib.Path, sys.argv[1:])
 target.write_text(json.dumps({'name': archive.name, 'sha256': hashlib.sha256(archive.read_bytes()).hexdigest()}, indent=2) + '\n')
 PYARTIFACT
 phase=verified
-echo "Verified artifact: $release_build/$artifact_name"
+echo "Archive checks passed; completing required release evidence…"

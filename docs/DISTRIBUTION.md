@@ -32,8 +32,8 @@ SIGNING_IDENTITY='Developer ID Application: your exact certificate name' NOTARY_
 
 ## 发布记录
 
-每次命令在 `.build/releases/evidence/run.*/manifest.json` 保存非秘密证据，包括源提交、开始时工作区是否有改动、版本/build、Swift/macOS/SDK、目标架构、执行阶段和退出码；失败记录也保留。Apple 返回可解析结果时另存仅含提交 ID、状态及日期的 `notarization.json`。成功时 ZIP 旁另有 `.manifest.json`，包含最终 SHA256 与已验证架构。证书名、凭据配置名、环境变量及用户数据不写入清单。
+每次命令在 `.build/releases/evidence/run.*/manifest.json` 保存非秘密证据，包括源提交、开始时工作区是否有改动、版本/build、Swift/macOS/SDK、目标架构、执行阶段和退出码；失败记录也保留。Apple 返回可解析结果时另存仅含提交 ID、状态及日期的 `notarization.json`。清单写入失败会让原本成功的发行返回非零状态；原先已有失败时保留其退出码，并始终清理临时构建目录。成功时 ZIP 旁另有 `.manifest.json`，包含最终 SHA256 与已验证架构。证书名、凭据配置名、环境变量及用户数据不写入清单。
 
-工作区有改动的清单仅追踪已提交基础，不足以完整复现候选源码；公开发行前仍需提交全部预期源文件，并从该提交重新生成包。人工补记 Xcode 版本（如使用完整 Xcode）、干净机器测试和已知限制。正式公证前，本项目不宣称 Gatekeeper 下载启动已通过。GitHub CI 不接触发行私钥、不自动上传未经审核的正式包。
+发行期间必须冻结源码，不要同时编辑、切换提交或更新工作树。清单记录的源提交与脏状态仅是开始时观测，不是原子源码快照，不能证明构建期间文件没有变化。工作区有改动的清单仅追踪已提交基础，不足以完整复现候选源码；公开发行前仍需提交全部预期源文件，并从该提交重新生成包。人工补记 Xcode 版本（如使用完整 Xcode）、干净机器测试和已知限制。正式公证前，本项目不宣称 Gatekeeper 下载启动已通过。GitHub CI 不接触发行私钥、不自动上传未经审核的正式包。
 
 参考：[Apple 分发](https://developer.apple.com/macos/distribution/)、[公证](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution)、[打包](https://developer.apple.com/documentation/xcode/packaging-mac-software-for-distribution)、[GitHub macOS runner](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)。
