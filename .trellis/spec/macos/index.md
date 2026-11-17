@@ -33,7 +33,7 @@ System Settings may show an enabled entry while the current ad hoc build reports
 - A detected Force Click and a successful full-selection read are separate acceptance gates. No selection is a valid failure outcome, not permission to cache a whole document.
 
 ## MVP conventions
-- `Analysis.swift` owns the OpenAI-compatible request, normal JSON-content parsing, HTTP/body-safe errors and redirect refusal. Full endpoints are not joined with extra `/v1` segments.
+- `Analysis.swift` owns the OpenAI-compatible request, normal JSON-content parsing, HTTP/body-safe errors and redirect refusal. Full endpoints are not joined with extra `/v1` segments. `NoRedirects` refuses every redirect; the offline Services suite invokes its actual delegate callback with an unresumed synthetic task to verify one nil decision for same-origin, cross-origin, and HTTPS downgrade destinations. This is policy coverage, not a live TLS/URLSession integration claim.
 - `Storage.swift` owns per-user local credential files and atomic Codable notebook persistence. Corruption preserves the original file and blocks writes.
 - `main.swift` owns native AppKit windows and one cancellation/generation boundary across AX capture and AI work. Closed windows never reopen from network results.
 - Local credential data is bound to a normalized HTTPS origin via nonsecret preferences; changing providers requires a new key. Secure fields are never prefilled from storage and are cleared on close.

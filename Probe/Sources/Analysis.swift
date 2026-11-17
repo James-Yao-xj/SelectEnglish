@@ -226,7 +226,8 @@ final class AnalysisClient {
 }
 
 /// Prevent credentials and selected text from following HTTP redirects.
-private final class NoRedirects: NSObject, URLSessionTaskDelegate {
+// Internal visibility lets offline tests invoke the real redirect decision without networking.
+final class NoRedirects: NSObject, URLSessionTaskDelegate {
     func urlSession(_ session: URLSession, task: URLSessionTask,
                     willPerformHTTPRedirection response: HTTPURLResponse,
                     newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {

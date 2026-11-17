@@ -89,6 +89,32 @@ func check(_ condition: @autoclosure () -> Bool, _ message: String) throws {
         let session = URLSession(configuration: config)
         defer { session.invalidateAndCancel() }
         let client = AnalysisClient(session: session)
+
+        // This checks the real delegate decision, not TLS or URLSession redirect delivery.
+        // The task is never resumed; all values are synthetic and no request can reach DNS.
+        let redirectPolicy = NoRedirects()
+        var original = URLRequest(url: URL(string: "https://provider.invalid/chat/completions")!)
+        original.httpMethod = "POST"
+        original.setValue("Bearer fake-redirect-test", forHTTPHeaderField: "Authorization")
+        original.httpBody = Data("synthetic selected text".utf8)
+        let redirectTask = session.dataTask(with: original)
+        defer { redirectTask.cancel() }
+        for (status, destination) in [
+            (302, "https://provider.invalid/other/chat/completions"),
+            (307, "https://different-provider.invalid/chat/completions"),
+            (301, "http://provider.invalid/chat/completions")
+        ] {
+            let response = HTTPURLResponse(url: original.url!, statusCode: status, httpVersion: nil,
+                                           headerFields: ["Location": destination])!
+            var proposed = original
+            proposed.url = URL(string: destination)!
+            var decisions: [URLRequest?] = []
+            redirectPolicy.urlSession(session, task: redirectTask, willPerformHTTPRedirection: response,
+                                      newRequest: proposed) { decisions.append($0) }
+            try check(decisions.count == 1, "redirect callback completes exactly once")
+            try check(decisions[0] == nil, "redirect policy never forwards headers or selected text")
+        }
+        print("PASS: actual redirect delegate rejects same-origin, cross-origin and downgrade decisions (unresumed task)")
         let settings = AIConfiguration(endpoint: "https://api.invalid/v1/chat/completions", model: "test-model")
         let analysis = Analysis(translation: "持续提问。", expressions: [.init(phrase: "keep asking", meaning: "持续提问", usage: "keep + 动词 ing", example: "Keep asking questions.")], vocabulary: [.init(word: "asking", partOfSpeech: "动词（动名词形式）", meaning: "提问")], sentenceExplanation: "这是一个短语，强调持续提出问题。")
         let encoded = String(decoding: try JSONEncoder().encode(analysis), as: UTF8.self)
