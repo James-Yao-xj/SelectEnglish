@@ -37,7 +37,8 @@ struct SelectionExtraction<Access: SelectionAccess> {
         func call<T>(_ operation: () -> T?) -> T? {
             guard calls < maximumCalls, now() < deadline, canContinue() else { return nil }
             calls += 1
-            return operation()
+            let value = operation()
+            return canContinue() ? value : nil
         }
         func selected(_ node: Access.Node) -> String? {
             if let text = call({ access.text(node, attribute: "AXSelectedText") }), !text.isEmpty {

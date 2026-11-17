@@ -38,7 +38,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate, NS
     private var generation = 0
     private var analysisTask: Task<Void, Never>?
     private var copyFallbackTask: Task<Void, Never>?
-    private var copyPermit: BrowserCopyPermit?
+    private var capturePermit: SelectionCapturePermit?
     private let selectionHotKey = SelectionHotKey()
     private var menuSource: NSRunningApplication?
     private var menuSourceIdentity: SelectionCommandIdentity?
@@ -394,6 +394,8 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate, NS
         invalidate()
         popup.requiresAnalysisConfirmation = false
         let requestGeneration = generation
+        let permit = SelectionCapturePermit()
+        capturePermit = permit
         currentSource = ""
         currentAnalysis = nil
         sourceView.string = ""
@@ -405,12 +407,15 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate, NS
         let captureStarted = ProcessInfo.processInfo.systemUptime
         popup.beginCapture(generation: requestGeneration, startedAt: triggerTimestamp ?? captureStarted)
         readerQueue.async { [weak self] in
-            let result = SelectionReader.read(pid: pid, launchDate: launchDate)
+            guard permit.isValid else { return }
+            let result = SelectionReader.read(pid: pid, launchDate: launchDate, permit: permit)
+            guard permit.isValid else { return }
             // Copy setup has its own 80 ms window check after the bounded AX read.
             let window = result.text.isEmpty && automaticallyAnalyze ? CapturedSelectionWindow.capture(pid: pid) : nil
+            guard permit.isValid else { return }
             let readSeconds = ProcessInfo.processInfo.systemUptime - captureStarted
             DispatchQueue.main.async {
-                guard let self, self.generation == requestGeneration else { return }
+                guard let self, self.generation == requestGeneration, permit.isValid else { return }
                 if automaticallyAnalyze {
                     let foreground = self.externalForegroundApplication()
                     guard SelectionCommandIdentity(pid: pid, launchDate: launchDate).matches(
@@ -434,14 +439,12 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate, NS
 
     /// Keep capture pending until the opt-in copy transaction has finished or been cancelled.
     @MainActor private func copyAfterFailedAX(source: BrowserCopySource, result: SelectionReader.Result, name: String, generation requestGeneration: Int, readSeconds: TimeInterval) {
-        let permit = BrowserCopyPermit()
-        copyPermit = permit
+        guard let permit = capturePermit, permit.isValid else { return }
         copyFallbackTask = Task { @MainActor [weak self] in
             guard let self else { return }
             defer {
                 if self.generation == requestGeneration && !source.isCurrent {
                     self.copyFallbackTask = nil
-                    self.copyPermit = nil
                     self.invalidate()
                     self.stateLabel.stringValue = "已取消，请返回原浏览器重新选文并重按。"
                 }
@@ -454,13 +457,11 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate, NS
                 }, performCopy: { try await action.performCopy() })
                 guard self.generation == requestGeneration, permit.isValid, source.isCurrent, !Task.isCancelled else { return }
                 self.copyFallbackTask = nil
-                self.copyPermit = nil
                 self.finishCapture(SelectionReader.Result(role: "浏览器复制", text: text, message: "已通过浏览器复制读取选区。"), name: name,
                     generation: requestGeneration, readSeconds: readSeconds, automaticallyAnalyze: true, origin: .clipboard)
             } catch {
                 guard self.generation == requestGeneration, !Task.isCancelled else { return }
                 self.copyFallbackTask = nil
-                self.copyPermit = nil
                 guard source.isCurrent else { self.invalidate(); return }
                 self.finishCapture(result, name: name, generation: requestGeneration, readSeconds: readSeconds,
                     automaticallyAnalyze: false, copyFailure: "浏览器复制取词未完成：" + error.localizedDescription)
@@ -548,8 +549,8 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate, NS
     private func invalidate() {
         monitor.cancelPendingTrigger()
         generation += 1
-        copyPermit?.cancel()
-        copyPermit = nil
+        capturePermit?.cancel()
+        capturePermit = nil
         copyFallbackTask?.cancel()
         copyFallbackTask = nil
         popup?.invalidateCapture()

@@ -19,19 +19,23 @@ enum SelectionReader {
     }
 
     /// Read only the original process through bounded public selection APIs.
-    static func read(pid: pid_t, launchDate: Date?) -> Result {
+    static func read(pid: pid_t, launchDate: Date?, permit: SelectionCapturePermit) -> Result {
+        let cancelled = Result(role: "未知", text: "", message: "已取消读取。")
+        guard permit.isValid else { return cancelled }
         guard let app = NSRunningApplication(processIdentifier: pid), !app.isTerminated,
               app.launchDate == launchDate else { return Result(role: "未知", text: "", message: "触发时的目标应用已退出或进程已改变。") }
         guard AXIsProcessTrusted() else { return Result(role: "未知", text: "", message: "当前进程未获得辅助功能授权；请授权后重试。") }
-        let access = NativeSelectionAccess()
+        let access = NativeSelectionAccess(permit: permit)
         let application = NativeSelectionAccess.Node(element: AXUIElementCreateApplication(pid))
         guard let focused = access.element(application, attribute: "AXFocusedUIElement") else {
             return Result(role: "未知", text: "", message: "无法获取目标应用的焦点元素。" + access.failureDescription)
         }
         let extractor = SelectionExtraction(access: access, now: { ProcessInfo.processInfo.systemUptime }, canContinue: {
-            !app.isTerminated && NSRunningApplication(processIdentifier: pid)?.launchDate == launchDate
+            permit.isValid && !app.isTerminated && NSRunningApplication(processIdentifier: pid)?.launchDate == launchDate
         })
-        guard let result = extractor.read(focused: focused), !app.isTerminated else {
+        let extracted = extractor.read(focused: focused)
+        guard permit.isValid else { return cancelled }
+        guard let result = extracted, !app.isTerminated else {
             return Result(role: access.text(focused, attribute: "AXRole") ?? "未知", text: "", message: "没有读取到有效选区；目标 PDF 可能未通过辅助功能暴露选中文字。" + access.failureDescription)
         }
         let message = result.requiresConfirmation
@@ -50,7 +54,9 @@ private final class NativeSelectionAccess: SelectionAccess {
         func hash(into hasher: inout Hasher) { hasher.combine(CFHash(element)) }
     }
     typealias Marker = CFTypeRef
+    private let permit: SelectionCapturePermit
     private let deadline = ProcessInfo.processInfo.systemUptime + 1.5
+    init(permit: SelectionCapturePermit) { self.permit = permit }
     private var substantiveError: AXError?
     var failureDescription: String {
         if let error = substantiveError {
@@ -77,9 +83,9 @@ private final class NativeSelectionAccess: SelectionAccess {
     /// Share the total deadline across focus discovery, extraction, and diagnostic metadata.
     private func prepare(_ node: Node) -> Bool {
         let remaining = deadline - ProcessInfo.processInfo.systemUptime
-        guard remaining > 0 else { return false }
+        guard permit.isValid, remaining > 0 else { return false }
         AXUIElementSetMessagingTimeout(node.element, Float(min(0.08, remaining)))
-        return true
+        return permit.isValid
     }
 
     private func attribute(_ node: Node, _ name: String) -> CFTypeRef? {

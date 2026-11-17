@@ -16,14 +16,6 @@ struct BrowserCopySource: Sendable {
     }
 }
 
-/// Share cancellation with the serial copy worker without reading controller state off-main.
-final class BrowserCopyPermit: @unchecked Sendable {
-    private let lock = NSLock()
-    private var cancelled = false
-    func cancel() { lock.lock(); cancelled = true; lock.unlock() }
-    var isValid: Bool { lock.lock(); defer { lock.unlock() }; return !cancelled }
-}
-
 /// Describe the only key events that this opt-in feature may create.
 struct BrowserCopyKeyIntent: Equatable {
     let keyCode: CGKeyCode
@@ -72,10 +64,10 @@ private struct NativeBrowserCopyEventPoster: BrowserCopyEventPoster {
 final class BrowserCopyFallback: @unchecked Sendable {
     private static let queue = DispatchQueue(label: "com.selectenglish.browser-copy")
     private let source: BrowserCopySource
-    private let permit: BrowserCopyPermit
-    private init(source: BrowserCopySource, permit: BrowserCopyPermit) { self.source = source; self.permit = permit }
+    private let permit: SelectionCapturePermit
+    private init(source: BrowserCopySource, permit: SelectionCapturePermit) { self.source = source; self.permit = permit }
 
-    @MainActor static func prepare(source: BrowserCopySource, permit: BrowserCopyPermit) async throws -> BrowserCopyFallback {
+    @MainActor static func prepare(source: BrowserCopySource, permit: SelectionCapturePermit) async throws -> BrowserCopyFallback {
         let releaseDeadline = ProcessInfo.processInfo.systemUptime + 0.6
         while NSEvent.pressedMouseButtons & 1 != 0 {
             guard permit.isValid, source.isCurrent else { throw CancellationError() }

@@ -42,7 +42,7 @@ poster.failKeyUpCreation = true
 do { try shortcut.perform(to: 12); fatalError("posted without releasable key") } catch {}
 check(poster.posted.isEmpty, "creation failure does not leave a key down")
 poster.failKeyUpCreation = false
-let permit = BrowserCopyPermit()
+let permit = SelectionCapturePermit()
 poster.postHook = { current = false; permit.cancel() }
 let cancellable = BrowserCopyShortcut(poster: poster, isCurrent: { current && permit.isValid })
 try cancellable.perform(to: 12)

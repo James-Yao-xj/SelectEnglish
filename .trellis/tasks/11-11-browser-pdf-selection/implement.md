@@ -34,3 +34,6 @@ The user's explicit ten-hour autonomous instruction supersedes all prior pending
 - Source and49-commit history credential-pattern scan found zero matches; no runtime credential or notebook file read.
 - Native automation timed out repeatedly, including inventory. No successful candidate PDF capture or native hotkey/menu claim. Current installed app remains0.10.3/build16 at canonical path; no unattended permission/authentication changes attempted.
 - Next: commit reviewed changes in logical groups, build clean-source beta, push fix branch, verify both CI runners, and retry native QA only when computer-use connection recovers. Keep main and public stable releases unchanged.
+
+## Cancelled-read latency checkpoint (2026-11-17)
+Implemented shared SelectionCapturePermit for the AX worker and copy continuation; invalidation now stops obsolete queued/active AX operations cooperatively instead of only suppressing publication. Existing per-call timeout still bounds an issued call; no forced-interrupt claim. Version0.11.0 build18. Focused deterministic cancellation/selection/copy tests and unsigned candidate compile passed; no app install, signing, runtime permission or user-data access in this change.
