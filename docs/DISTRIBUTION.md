@@ -12,7 +12,7 @@ bash Probe/release.sh --beta
 
 `build.sh` 默认运行离线测试，输出 `.build/probe/SelectEnglish.app`，包含 arm64 和 x86_64 两种架构，部署目标 macOS 13.0。`--unsigned` 只编译供发行脚本签名，`--skip-tests` 仅用于已经完成验证的本地迭代，发布验收不应跳过测试。
 
-测试包输出 `.build/releases/SelectEnglish-v0.10.0-beta.1.zip` 和 `.zip.sha256`。打包资源含 LICENSE 与 PRIVACY.md，不包含 Application Support、偏好设置、密钥或收藏。上传前核对 ZIP 内只有预期应用内容、架构和签名，并检查待发布文件没有凭据。
+测试包文件名从 `Probe/Info.plist` 的版本生成，例如版本为 0.10.3 时输出 `.build/releases/SelectEnglish-v0.10.3-beta.1.zip` 和 `.zip.sha256`；这不是已发布版本或 PDF 修复成功的声明。打包资源含 LICENSE 与 PRIVACY.md，不包含 Application Support、偏好设置、密钥或收藏。上传前核对 ZIP 内只有预期应用内容、架构和签名，并检查待发布文件没有凭据。
 
 只有本次发布命令成功退出后，才能发布其产物。失败时可能仍保留此前同版本的 ZIP 和校验文件；文件存在不代表本次构建或公证通过，不应将旧文件作为本次验收证据。
 
@@ -32,6 +32,8 @@ SIGNING_IDENTITY='Developer ID Application: your exact certificate name' NOTARY_
 
 ## 发布记录
 
-记录源提交、版本/build、Xcode/Swift/macOS、架构、签名模式、公证提交及 Accepted 状态、最终 SHA256、干净机器测试结果和已知限制。正式公证前，本项目不宣称 Gatekeeper 下载启动已通过。GitHub CI 不接触发行私钥、不自动上传未经审核的正式包。
+每次命令在 `.build/releases/evidence/run.*/manifest.json` 保存非秘密证据，包括源提交、开始时工作区是否有改动、版本/build、Swift/macOS/SDK、目标架构、执行阶段和退出码；失败记录也保留。Apple 返回可解析结果时另存仅含提交 ID、状态及日期的 `notarization.json`。成功时 ZIP 旁另有 `.manifest.json`，包含最终 SHA256 与已验证架构。证书名、凭据配置名、环境变量及用户数据不写入清单。
+
+工作区有改动的清单仅追踪已提交基础，不足以完整复现候选源码；公开发行前仍需提交全部预期源文件，并从该提交重新生成包。人工补记 Xcode 版本（如使用完整 Xcode）、干净机器测试和已知限制。正式公证前，本项目不宣称 Gatekeeper 下载启动已通过。GitHub CI 不接触发行私钥、不自动上传未经审核的正式包。
 
 参考：[Apple 分发](https://developer.apple.com/macos/distribution/)、[公证](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution)、[打包](https://developer.apple.com/documentation/xcode/packaging-mac-software-for-distribution)、[GitHub macOS runner](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)。

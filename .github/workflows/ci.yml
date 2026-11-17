@@ -16,8 +16,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Offline regression suite and universal macOS 13 build
-        run: bash Probe/build.sh --unsigned
+      - name: Offline regression suite and verified universal beta package
+        run: bash Probe/release.sh --beta
       - name: Verify both slices and deployment floor
         run: |
           executable=.build/probe/SelectEnglish.app/Contents/MacOS/SelectEnglishProbe
@@ -26,3 +26,14 @@ jobs:
           for arch in arm64 x86_64; do
             xcrun vtool -arch "$arch" -show-build "$executable" | awk '$1 == "minos" { found=1; if ($2 != "13.0") exit 1 } END { if (!found) exit 1 }'
           done
+      - name: Preserve nonsecret release evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-evidence-${{ matrix.runner }}
+          path: |
+            .build/releases/evidence/
+            .build/releases/*.manifest.json
+            .build/releases/*.sha256
+          if-no-files-found: warn
+          retention-days: 14
