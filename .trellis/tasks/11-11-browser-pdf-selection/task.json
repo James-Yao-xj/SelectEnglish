@@ -21,6 +21,6 @@
   "children": [],
   "parent": null,
   "relatedFiles": [],
-  "notes": "",
+  "notes": "2026-11-18: PR1 merged; v0.11.0-beta.1 publicly published as prerelease from clean c137fd2, build21. Current local permissions restored. Keep native PDF acceptance open; publication does not establish positive Force Click/PDF capture.",
   "meta": {}
 }
