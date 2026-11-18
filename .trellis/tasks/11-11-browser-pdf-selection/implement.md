@@ -1,10 +1,10 @@
 # Plan
 
-## Latest checkpoint — 2026-11-17 16:49 UTC
+## Latest checkpoint — 2026-11-18 publication preparation
 
-The dated sections below preserve the debugging history; they are not all current installation state. Canonical app is now0.11.0/build21, packaged from clean e117d2a without resigning after packaging. Current branch includes later documentation only. PR1 is draft/unmerged, and v0.11.0-beta.1 is an unpublished draft candidate; public download remains v0.10.0-beta.1. Current process still lacks AX/input access; human-only authentication and positive PDF/physical tests remain deferred without questions during the autonomous window. See autonomous-2026-11-17.md and docs/RELEASE-CHECKLIST.md for exact source/hash/native limits.
+PR1 has merged as5501362 into main. Canonical installed app is0.11.0/build21, originally packaged from clean e117d2a. On11-18 the current application was re-added through system permission UI and restarted: AX authorized, input listening allowed, tap created/enabled and shortcut registered. This does not prove positive native PDF capture, confirmation or physical Force Click behavior. Historical dated sections below retain earlier debugging states, not current status.
 
-Remaining window work: nonsecret background process observation through23:22:20UTC, a concise public bug-report form for reproducible sanitized reports, and final state/evidence reconciliation. No broader permissions, actor migration, production churn, main merge or public release is planned merely to fill the remaining time.
+User explicitly authorized completing main documentation and publishing v0.11.0-beta.1 as a public prerelease. Current documentation describes that version and its limits. Next: commit reviewed docs, freeze clean source, run full beta package verification, update draft target/assets/notes, verify remote bytes, publish prerelease and verify public links. Keep native acceptance task open; do not replace the already-authorized installed application just for documentation changes.
 
 - [x] Investigate browser PDF AX API shape and implement narrowly scoped capture support.
 - [x] Regression tests and full universal build; independent review.
@@ -61,3 +61,6 @@ Controller invalidation snapshots pending AX/copy/analysis work before clearing 
 
 ## Public-facing naming and generic selection errors
 Use SelectEnglish as CFBundleName for the user-facing application menu; keep com.selectenglish.probe and the SelectEnglishProbe executable unchanged, so UserDefaults/runtime paths retain their existing identity. Empty-selection diagnostics refer to the target application rather than incorrectly assuming every failed source is a PDF. These copy/metadata corrections receive plist and whole-package validation, not cosmetic mirror tests.
+
+## v0.11.0-beta.1 publication plan (2026-11-18)
+User authorized public prerelease after main merge5501362. Update current-version README/install/privacy/PDF notes and changelog; independent documentation check; commit main; freeze clean source and run full beta release verification; update draft target/assets/notes with exact commit/hash; verify remote bytes before publication; publish as prerelease and confirm public links plus main synchronization. Keep native PDF acceptance open and local installed identity untouched.

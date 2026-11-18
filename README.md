@@ -7,7 +7,7 @@
 
 SelectEnglish 是一款面向 MacBook 的英语阅读工具。阅读网页或文档时，选中英文并用力点按触控板，即可在原文附近的小浮窗中查看生词、整句解释和固定表达，把查词与理解句子放在同一个阅读动作里。
 
-[下载测试版](https://github.com/James-Yao-xj/SelectEnglish/releases/tag/v0.10.0-beta.1) · [安装指南](docs/INSTALL.md) · [隐私说明](PRIVACY.md) · [参与贡献](CONTRIBUTING.md)
+[下载测试版](https://github.com/James-Yao-xj/SelectEnglish/releases/tag/v0.11.0-beta.1) · [安装指南](docs/INSTALL.md) · [隐私说明](PRIVACY.md) · [参与贡献](CONTRIBUTING.md)
 
 ## 为阅读而设计
 
@@ -20,7 +20,7 @@ SelectEnglish 是一款面向 MacBook 的英语阅读工具。阅读网页或文
 
 六级难度由 AI 根据语境估计，并未接入官方词表；不保证词表归属。图片文字和扫描 PDF 不支持取词；辅助功能未暴露选区时也可能读取失败。浏览器 PDF 的可选复制兼容方案与验证进度见[PDF 选区说明](docs/BROWSER-PDF.md)。
 
-当前修复分支还提供菜单“翻译当前选区（PDF 推荐）”和 `⌃⌥⌘T` 候选入口，避免再次点击 PDF 清空选区；复制结果及 PDF 子树候选须先核对预览。该功能尚未包含在上方下载包中，实机验证状态见同一份 PDF 说明。
+v0.11.0-beta.1 / build 21 增加菜单“翻译当前选区（PDF 推荐）”和 `⌃⌥⌘T`，可避免再次点击 PDF 正文可能清空选区的问题；复制结果及 PDF 子树候选须先核对并点击“分析选文”。这些入口和 PDF 完整读取尚未完成正向实机验收，具体边界见同一份 PDF 说明。
 
 ## 一次查询，可以学到什么
 
@@ -38,20 +38,20 @@ SelectEnglish 是一款面向 MacBook 的英语阅读工具。阅读网页或文
 
 ## 开始使用
 
-1. 从 [v0.10.0-beta.1 发布页](https://github.com/James-Yao-xj/SelectEnglish/releases/tag/v0.10.0-beta.1)下载 ZIP 与校验文件，解压后将 `SelectEnglish.app` 放入“应用程序”。先退出旧副本，统一从 `/Applications/SelectEnglish.app` 启动。
+1. 从 [v0.11.0-beta.1 发布页](https://github.com/James-Yao-xj/SelectEnglish/releases/tag/v0.11.0-beta.1)下载 ZIP 与校验文件，解压后将 `SelectEnglish.app` 放入“应用程序”。先退出旧副本，统一从 `/Applications/SelectEnglish.app` 启动。
 2. 在菜单栏“译”的使用帮助中，按指引授予“辅助功能”和“输入监控”权限。输入监控只观察鼠标和触控板手势，不监听全局键盘。
 3. 打开“AI 设置”，填写完整 HTTPS `/chat/completions` 接口地址、模型和密钥。
-4. 在 TextEdit 或浏览器中选中一句愿意发送给该服务的英文，用力点按触控板。
+4. 在 TextEdit 或浏览器中选中一句愿意发送给该服务的英文，用力点按触控板。PDF 可先尝试菜单“翻译当前选区（PDF 推荐）”或 `⌃⌥⌘T`；出现预览时，核对文字后点击“分析选文”。
 
 **当前为早期公开测试版，采用临时签名，尚未完成 Apple 公证，下载后可能被 macOS 拦截。** 遇到拦截时可等待正式签名版本，或具备开发经验时从源码构建；不要关闭 Gatekeeper 或移除隔离标记。授权、系统词典冲突及排错步骤见[安装指南](docs/INSTALL.md)。
 
-安装包包含 Apple 芯片和 Intel 两种架构，需要支持 Force Touch 的触控板。macOS 13.0 是编译部署下限；最低系统实际运行、Intel 触控板及另一台 Mac 的全新安装仍待验证。具体证据与待办见[发布验收记录](docs/RELEASE-CHECKLIST.md)。
+安装包包含 Apple 芯片和 Intel 两种架构，其中重按操作需要支持 Force Touch 的触控板。macOS 13.0 是编译部署下限；最低系统实际运行、Intel 触控板及另一台 Mac 的全新安装仍待验证。具体证据与待办见[发布验收记录](docs/RELEASE-CHECKLIST.md)。
 
 ## 隐私与数据
 
 **保存有效配置后，重按或显式翻译命令从焦点元素直接读到选文后，会自动发送到你指定的 AI 服务，可能产生该服务的费用。** 未配置时不发送。第三方如何保留或使用数据，取决于该服务的政策。
 
-应用没有开发者运营的中转服务器、遥测或自动崩溃上传。默认通过辅助功能取词，不使用剪贴板；候选版可自行开启浏览器复制兼容，会向重按时的原浏览器发送 ⌘C，并临时备份、清空和读取剪贴板，再尝试恢复。复制结果的来源无法由系统证明，剪贴板管理器也可能记录这些内容。本分支要求复制结果及可能不完整的 PDF 子树候选先预览，核对并点击“分析选文”后才分析；该流程尚未包含在上方已发布安装包中，详见[隐私说明](PRIVACY.md)。分析结果不会自动保存为历史记录，只有点击“收藏”才写入本机。
+应用没有开发者运营的中转服务器、遥测或自动崩溃上传。默认通过辅助功能取词，不使用剪贴板；可自行开启默认关闭的浏览器复制兼容，会向触发时的原浏览器发送 ⌘C，并临时备份、清空和读取剪贴板，再尝试恢复。复制结果的来源无法由系统证明，剪贴板管理器也可能记录这些内容。复制结果及可能不完整的 PDF 子树候选须先预览，核对并点击“分析选文”后才分析，详见[隐私说明](PRIVACY.md)。分析结果不会自动保存为历史记录，只有点击“收藏”才写入本机。
 
 API 密钥以**明文**保存在本机用户私有文件，通过本机文件权限限制访问，未使用加密存储。密钥与收藏均位于 `~/Library/Application Support/SelectEnglish/`，与项目仓库分离。完整数据流、删除和权限说明见[隐私说明](PRIVACY.md)。
 
@@ -67,6 +67,7 @@ open .build/probe/SelectEnglish.app
 
 离线测试使用模拟 HTTP、假密钥和临时文件；CI 覆盖 Apple 芯片与 Intel 宿主的回归测试及双架构构建。它们不替代实际触控板、第三方 AI 和全新机器安装测试。
 
+- [版本变化](CHANGELOG.md)：本轮更新与已知限制
 - [贡献指南](CONTRIBUTING.md)：开发环境、代码边界与验证方式
 - [发布流程](docs/DISTRIBUTION.md)：打包、签名与公证
 - [六级筛选评估](docs/evaluation/README.md)：公开样例与人工评估规则
