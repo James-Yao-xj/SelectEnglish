@@ -84,11 +84,83 @@ func check(_ condition: @autoclosure () -> Bool, _ message: String) throws {
         catch { try check(error.localizedDescription != "suppressed read error", "read I/O failures propagate") }
         print("PASS: isolated local credential save/replace/reopen/delete/modes/UTF-8/I/O failures")
 
+        // A separate suite and fake writer isolate every binding test from real user data.
+        let bindingSuite = "SelectEnglish.Tests.Binding." + UUID().uuidString
+        let bindingDefaults = UserDefaults(suiteName: bindingSuite)!
+        defer { bindingDefaults.removePersistentDomain(forName: bindingSuite) }
+        let oldOrigin = "https://old.invalid:443"
+        let newOrigin = "https://new.invalid:443"
+        let oldEndpoint = "https://old.invalid/chat/completions"
+        var fakeCredential = "synthetic-old"
+        bindingDefaults.set(oldEndpoint, forKey: "ai.endpoint")
+        bindingDefaults.set(oldOrigin, forKey: "ai.keyOrigin")
+        do {
+            try KeyStore.saveBound("synthetic-new", origin: newOrigin, defaults: bindingDefaults) { value in
+                try check(bindingDefaults.string(forKey: "ai.keyOrigin") == nil, "unbind before the first replacement side effect")
+                fakeCredential = value
+                throw AppError.message("injected post-replacement failure")
+            }
+            throw AppError.message("partial replacement unexpectedly succeeded")
+        } catch { try check(error.localizedDescription == "injected post-replacement failure", "partial write error propagates") }
+        try check(fakeCredential == "synthetic-new", "fault writer actually replaced fake bytes")
+        try check(bindingDefaults.string(forKey: "ai.keyOrigin") == nil, "partial write cannot keep the old provider binding")
+        try check(bindingDefaults.string(forKey: "ai.endpoint") == oldEndpoint, "failed replacement does not change endpoint")
+        bindingDefaults.set(oldOrigin, forKey: "ai.keyOrigin")
+        do {
+            try KeyStore.saveBound("synthetic-unused", origin: newOrigin, defaults: bindingDefaults) { _ in
+                throw AppError.message("injected pre-write failure")
+            }
+            throw AppError.message("pre-write failure unexpectedly succeeded")
+        } catch { try check(error.localizedDescription == "injected pre-write failure", "pre-write error propagates") }
+        try check(fakeCredential == "synthetic-new" && bindingDefaults.string(forKey: "ai.keyOrigin") == nil,
+                  "failure before mutation also leaves the credential unbound")
+        try KeyStore.saveBound("synthetic-success", origin: newOrigin, defaults: bindingDefaults) { value in
+            try check(bindingDefaults.string(forKey: "ai.keyOrigin") == nil, "success writer starts unbound")
+            fakeCredential = value
+        }
+        try check(fakeCredential == "synthetic-success" && bindingDefaults.string(forKey: "ai.keyOrigin") == newOrigin,
+                  "only a completed writer binds the new provider")
+        do {
+            try KeyStore.saveBound("synthetic-same-provider", origin: newOrigin, defaults: bindingDefaults) { value in
+                fakeCredential = value
+                throw AppError.message("injected same-origin failure")
+            }
+            throw AppError.message("same-origin failure unexpectedly succeeded")
+        } catch { try check(error.localizedDescription == "injected same-origin failure", "same-origin error propagates") }
+        try check(bindingDefaults.string(forKey: "ai.keyOrigin") == nil, "same-origin write failures must not restore a stale binding")
+        print("PASS: isolated provider binding fails closed before/after mutation and on same-origin errors")
+
         let config = URLSessionConfiguration.ephemeral
         config.protocolClasses = [MockProtocol.self]
         let session = URLSession(configuration: config)
         defer { session.invalidateAndCancel() }
         let client = AnalysisClient(session: session)
+
+        // This checks the real delegate decision, not TLS or URLSession redirect delivery.
+        // The task is never resumed; all values are synthetic and no request can reach DNS.
+        let redirectPolicy = NoRedirects()
+        var original = URLRequest(url: URL(string: "https://provider.invalid/chat/completions")!)
+        original.httpMethod = "POST"
+        original.setValue("Bearer fake-redirect-test", forHTTPHeaderField: "Authorization")
+        original.httpBody = Data("synthetic selected text".utf8)
+        let redirectTask = session.dataTask(with: original)
+        defer { redirectTask.cancel() }
+        for (status, destination) in [
+            (302, "https://provider.invalid/other/chat/completions"),
+            (307, "https://different-provider.invalid/chat/completions"),
+            (301, "http://provider.invalid/chat/completions")
+        ] {
+            let response = HTTPURLResponse(url: original.url!, statusCode: status, httpVersion: nil,
+                                           headerFields: ["Location": destination])!
+            var proposed = original
+            proposed.url = URL(string: destination)!
+            var decisions: [URLRequest?] = []
+            redirectPolicy.urlSession(session, task: redirectTask, willPerformHTTPRedirection: response,
+                                      newRequest: proposed) { decisions.append($0) }
+            try check(decisions.count == 1, "redirect callback completes exactly once")
+            try check(decisions[0] == nil, "redirect policy never forwards headers or selected text")
+        }
+        print("PASS: actual redirect delegate rejects same-origin, cross-origin and downgrade decisions (unresumed task)")
         let settings = AIConfiguration(endpoint: "https://api.invalid/v1/chat/completions", model: "test-model")
         let analysis = Analysis(translation: "持续提问。", expressions: [.init(phrase: "keep asking", meaning: "持续提问", usage: "keep + 动词 ing", example: "Keep asking questions.")], vocabulary: [.init(word: "asking", partOfSpeech: "动词（动名词形式）", meaning: "提问")], sentenceExplanation: "这是一个短语，强调持续提出问题。")
         let encoded = String(decoding: try JSONEncoder().encode(analysis), as: UTF8.self)
@@ -190,6 +262,51 @@ func check(_ condition: @autoclosure () -> Bool, _ message: String) throws {
         }
         print("PASS: exact single-word vocabulary, case/boundary punctuation and preserved inflection")
 
+        func vocabularyResult(_ word: String) -> Analysis {
+            Analysis(translation: "测试译文", expressions: [], vocabulary: [.init(word: word, partOfSpeech: "测试词性", meaning: "测试词义")], sentenceExplanation: "测试解析。")
+        }
+        for (source, word) in [
+            ("The scientist scrutinized the results.", "banana"),
+            ("The scientists scrutinized the results.", "scientist"),
+            ("A neuroscientist led the study.", "scientist"),
+            ("A scientist-led study.", "scientist"),
+            ("A scientist-led study.", "led"),
+            ("They checked the internet.", "net"),
+            ("They use C++ and .NET.", "C"),
+            ("They use C++ and .NET.", "NET"),
+            ("They use C++ and .NET.", "C#"),
+            ("They discuss well-being.", "wellbeing"),
+            ("They discuss well‑being.", "well-being"),
+            ("They can't proceed.", "cant")
+        ] {
+            do { _ = try vocabularyResult(word).validated(source: source); throw AppError.message("accepted unrelated source form") }
+            catch { try check(error.localizedDescription != "accepted unrelated source form", "sentence vocabulary must retain complete source forms") }
+        }
+        for (source, word) in [
+            ("The SCIENTIST scrutinized the results.", "scientist"),
+            ("A 'scientist' scrutinized the results.", "scientist"),
+            ("A scientist-led study.", "scientist-led"),
+            ("They use C++ and .NET.", "C++"),
+            ("They use C++ and .NET.", ".NET"),
+            ("They use C#.", "C#"),
+            ("They discuss well-being.", "well-being"),
+            ("They can't proceed.", "can't"),
+            ("They study neural\n  networks.", "neural networks"),
+            ("A neuroscientist and a scientist.", "scientist")
+        ] { _ = try vocabularyResult(word).validated(source: source) }
+        let unrelatedContent = String(decoding: try JSONEncoder().encode(vocabularyResult("banana")), as: UTF8.self)
+        let unrelatedEnvelope = try JSONSerialization.data(withJSONObject: ["choices": [["message": ["content": unrelatedContent]]]])
+        MockProtocol.handler = { _ in (200, unrelatedEnvelope) }
+        do {
+            _ = try await client.analyze(text: "The scientist scrutinized the results.", configuration: settings, key: "test-key")
+            throw AppError.message("accepted unrelated HTTP vocabulary")
+        } catch {
+            try check(error.localizedDescription != "accepted unrelated HTTP vocabulary"
+                && !error.localizedDescription.contains("scientist") && !error.localizedDescription.contains("banana"),
+                "production HTTP validation rejects unrelated vocabulary without echoing selected text")
+        }
+        print("PASS: sentence vocabulary provenance, technical boundaries and multiline source forms")
+
         try check(singleWord.displayText.contains("原文没有明显的固定表达。"), "single word can have no fixed expressions")
         let noWords = Analysis(translation: "他在。", expressions: [], vocabulary: [], sentenceExplanation: "这是一个简短陈述。")
         _ = try noWords.validated(source: "He is here.")
@@ -197,6 +314,16 @@ func check(_ condition: @autoclosure () -> Bool, _ message: String) throws {
         _ = try noWords.validated(source: "Hello,world!")
         do { _ = try noWords.validated(source: "Happy"); throw AppError.message("accepted missing single word") }
         catch { try check(error.localizedDescription != "accepted missing single word", "single-word input requires its POS/meaning") }
+        for term in ["3D", "COVID-19", "C+", "C++", ".NET", "C#"] {
+            _ = try vocabularyResult(term).validated(source: term)
+            for invalid in [noWords, vocabularyResult("banana")] {
+                do { _ = try invalid.validated(source: term); throw AppError.message("accepted missing technical term") }
+                catch { try check(error.localizedDescription != "accepted missing technical term", "isolated technical term requires its literal vocabulary entry") }
+            }
+        }
+        _ = try noWords.validated(source: "123")
+        _ = try noWords.validated(source: "They use 3D models, COVID-19 data and C++.")
+        print("PASS: isolated alphanumeric and plus-suffix terms require exact vocabulary; fragments and sentences may stay empty")
         for invalid in [
             Analysis(translation: "旧译文", expressions: []),
             Analysis(translation: "译文", expressions: [], vocabulary: [], sentenceExplanation: " "),

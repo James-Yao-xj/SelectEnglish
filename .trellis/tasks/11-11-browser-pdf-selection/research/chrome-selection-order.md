@@ -1,0 +1,13 @@
+# Chrome PDF selection order investigation
+## Evidence
+Actual0.10.3 physicaltest still nofreshtext. Latest target confirmed built-inChrome PDF, not earlierambientAnySharepage. Screenshotaftertest has no highlight. UsermanualCmd+C/paste withoutnewPDFclick succeeds. Do notinferactualtriggersite solelyfromlaterforegroundUI; earlierAnyShareclassification wasunproven.
+PrimaryChromium pdfium_engine.cc OnLeftMouseDown clears selection_ beforeeventarea/click-count processing. OnSingleClick adds zero-lengthrange; doubleclick selectsword. Thus a new singlemouseDown leadingtoForceClick can destroy a priorparagraphselection beforepassive stage2 capture.
+https://chromium.googlesource.com/chromium/src/+/master/pdf/pdfium/pdfium_engine.cc
+Observedpage sourceblob1c94d8f55b09efd527ddbfbcc43782b3fbac0a81, lines2044-2046,2110-2117,2174-2178 inwebview. Current installedChromeversionnotexplicitlypinned; source+observedhighlight makesleadinghypothesis, not proofallreadersbehavesame.
+## Failed approaches
+A focus-only reader missed nestedPDFselection. BoundedAXranges/markers fixshape butcannotrecoveralreadyclearedselection. NativeCopy AXmenu and targetPIDCmdC also cannotcopyanemptyselection. Fakeunit algorithmsdidnotmodelbrowsermouseDown-order and wereinsufficientevidence fornativefeature. Noactualclipboardbackup/privatePDFURL/userparagraph saved.
+## Next discriminating controls
+WithuserChromeinteractionpaused: doubleclickpublicword (noForce), runmanualAXdiagwithoutPDFclick tocheckreadcapability. Clickonlybrowsertoolbarblankafterselection toseehighlightretained; neveractivatePDFpage withanotherordinaryclick. Ifretained, actualForceClickoutsidePDFbodycanvalidateselectedparagraphworkflowwithoutpre-copy. SecondclickdeepenedtoForceClick canpotentiallytestword-onlyselection butdoesnotpreservearbitraryparagraph.
+Do notpre-copyeveryselection, pollbackgroundtabs, suppressmouseevents orintroduceglobalkeyboardmonitoring underexistingconsent. IfexactForceClickinsideparagraphrequiresadvancecapture ornewtrigger, firstpresenttheproduct/privacydecision.
+## Root-cause categories and prevention
+D integrationtestgap: syntheticAX/clipboardpassdoesnotcoverPDFmouseDownbeforestage2. E implicitassumption: priorselectionpersistsduringnewpress. Establishactualtargetviewerandselectionstatebeforecodechanges; nativecontrolsfirst, onefrozenbuildafterdiscriminatingproof. Keepnativeproof/deployment/algorithmteststateseparate. UpdatePDFspecwithgesture-ordercheck, not newblindfallback.

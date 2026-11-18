@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 安全与敏感信息反馈
+    url: https://github.com/James-Yao-xj/SelectEnglish/blob/main/SECURITY.md
+    about: 提交安全问题前先阅读此说明，不要在公开 Issue 中包含漏洞细节或凭据。

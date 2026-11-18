@@ -1,0 +1,75 @@
+name: 故障报告
+description: 使用脱敏的最小示例报告取词、分析或应用操作问题。
+body:
+  - type: markdown
+    attributes:
+      value: |
+        这是公开 Issue。请使用自编或公开例句，不要提交私人原文、私人 PDF 或链接、API 密钥、账户信息、配置文件或全量日志。
+        安全漏洞及密钥泄露请先阅读 [安全反馈说明](https://github.com/James-Yao-xj/SelectEnglish/blob/main/SECURITY.md)，不要在此公开敏感细节。
+        不必为了报告问题关闭 Gatekeeper、清除权限或重新安装。不同测试包和候选分支的功能可能不同，请尽量注明版本；不知道的项目可以填“不知道”。
+  - type: input
+    id: app_version
+    attributes:
+      label: 应用版本与 build
+      description: 填写你实际使用的版本，不是预期下载的版本；也可填写“不知道”。
+      placeholder: 版本 / build（不知道也可以）
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 运行环境
+      description: macOS 版本、Apple 芯片或 Intel，以及出现问题的目标应用或浏览器名称和版本。不确定的项目填“不知道”。
+      placeholder: |
+        macOS：
+        芯片类型：
+        目标应用 / 浏览器及版本：
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 最小复现步骤
+      description: 从哪个操作开始、如何触发、是否每次出现。只用自编或公开例句说明，不需要提供 PDF 地址或文件。
+      placeholder: |
+        1. 打开……
+        2. 选中公开例句……
+        3. 使用……触发
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: 实际结果与预期结果
+      description: 分别说明发生了什么、希望发生什么。请避免粘贴私人选区、完整响应或日志。
+      placeholder: |
+        实际结果：
+        预期结果：
+    validations:
+      required: true
+  - type: dropdown
+    id: trigger
+    attributes:
+      label: 触发方式（可选，可多选）
+      multiple: true
+      options:
+        - 触控板重按
+        - 菜单翻译当前选区
+        - 注册的翻译快捷键
+        - 手动选区诊断
+        - 其他操作或不知道
+  - type: textarea
+    id: pdf_context
+    attributes:
+      label: PDF 情况（可选）
+      description: 仅问题涉及 PDF 时填写。不需要 PDF 文件、链接或私人原文，也不要求更改文档复制限制。
+      placeholder: |
+        可选择文字的 PDF / 扫描图片 / 不知道：
+        浏览器内置阅读器 / 网页自定义阅读器 / 不知道：
+        触发后选区高亮是否还在：
+        手动复制公开例句是否成功（如已尝试）：
+  - type: textarea
+    id: diagnostic_hint
+    attributes:
+      label: 脱敏状态提示（可选）
+      description: 可只填写辅助功能和输入监听是否允许、监听是否启用、触发计数是否变化或一条脱敏错误提示。不要上传配置、密钥、私人文本、截图中的身份信息或全量日志。

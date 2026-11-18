@@ -19,3 +19,21 @@ swiftc -module-cache-path "$probe_tests/module-cache" Probe/Sources/PopupMouseEv
 
 swiftc -module-cache-path "$probe_tests/module-cache" Probe/Sources/OnboardingPolicy.swift Probe/Tests/Onboarding/main.swift -o "$probe_tests/onboarding-tests"
 "$probe_tests/onboarding-tests"
+
+swiftc -module-cache-path "$probe_tests/module-cache" Probe/Sources/SelectionExtraction.swift Probe/Tests/Selection/main.swift -o "$probe_tests/selection-tests"
+"$probe_tests/selection-tests"
+
+swiftc -module-cache-path "$probe_tests/module-cache" Probe/Sources/Analysis.swift Probe/Sources/BrowserCopyFallback.swift Probe/Sources/SelectionCapturePermit.swift Probe/Sources/SelectionCommand.swift Probe/Tests/BrowserCopy/main.swift -framework AppKit -framework ApplicationServices -o "$probe_tests/browser-copy-tests"
+"$probe_tests/browser-copy-tests"
+
+swiftc -parse-as-library -module-cache-path "$probe_tests/module-cache" Probe/Sources/ClipboardSelectionTransaction.swift Probe/Tests/Clipboard/main.swift -framework AppKit -o "$probe_tests/clipboard-tests"
+"$probe_tests/clipboard-tests"
+
+swiftc -module-cache-path "$probe_tests/module-cache" Probe/Sources/SelectionCapturePermit.swift Probe/Sources/SelectionCommand.swift Probe/Tests/SelectionCommand/main.swift -framework AppKit -framework ApplicationServices -framework Carbon -o "$probe_tests/selection-command-tests"
+"$probe_tests/selection-command-tests"
+
+swiftc -module-cache-path "$probe_tests/module-cache" Probe/Sources/DeferredCaptureTriggerState.swift Probe/Sources/PopupDismissalState.swift Probe/Tests/DeferredTrigger/main.swift -o "$probe_tests/deferred-trigger-tests"
+"$probe_tests/deferred-trigger-tests"
+
+swiftc -module-cache-path "$probe_tests/module-cache" Probe/Sources/SelectionCapturePermit.swift Probe/Sources/SelectionExtraction.swift Probe/Tests/CaptureCancellation/main.swift -o "$probe_tests/capture-cancellation-tests"
+"$probe_tests/capture-cancellation-tests"
